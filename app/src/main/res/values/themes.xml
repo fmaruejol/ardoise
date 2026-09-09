@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- The window background is painted before Compose draws anything, so a
+         cold start does not flash the wrong colour. It follows the system's
+         light/dark setting (values-night) rather than the app's own, which is
+         in DataStore and has not been read yet. The bars themselves are
+         handled by enableEdgeToEdge in MainActivity, which does know. -->
+    <style name="Theme.Ardoise" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+</resources>

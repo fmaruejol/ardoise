@@ -1,0 +1,17 @@
+{
+  "attribution": {
+    "sessionUrl": false
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"Comments: write only what the code cannot say - a rule, a constraint, a deliberate deviation, a reason a reader would otherwise undo. Never restate what the next line does. Prefer no comment to an obvious one. A comment that would survive a rewrite of the code below it is worth keeping; one that describes the code is not.\"}}'"
+          }
+        ]
+      }
+    ]
+  }
+}

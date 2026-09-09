@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Only what the window theme needs before Compose takes over; the rest of
+      the palette lives in ui/theme/Color.kt.
+
+      This one follows the *system*, not the app's own setting, because it is
+      painted before anything has read DataStore. Someone who chose the theme
+      the system is not in sees one frame of the other one on a cold start.
+    -->
+    <color name="window_background">#F5FBF8</color>
+</resources>

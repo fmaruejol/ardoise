@@ -1,0 +1,90 @@
+name: Release
+
+# Tag-driven: `git tag v1.2.3 && git push --tags` builds, signs and publishes.
+# Nothing is released from a branch, so a release is always a named commit.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build, without the leading v (e.g. 1.2.3)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Derive version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            NAME="${{ github.event.inputs.version }}"
+          else
+            NAME="${GITHUB_REF_NAME#v}"
+          fi
+          # x.y.z -> a single increasing integer, two digits per part. Android
+          # refuses to install an update whose versionCode did not grow, and
+          # Obtainium installs through Android like anything else.
+          CODE=$(echo "$NAME" | awk -F. '{printf "%d%02d%02d", $1, $2, $3}')
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "Building $NAME (versionCode $CODE)"
+
+      # The suites that need no device. The instrumented ones are not run here:
+      # they need an emulator, and a release should not be gated on one.
+      - name: Test
+        run: ./gradlew testDebugUnitTest test spotlessCheck lint
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Build signed APK
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease \
+            -PappVersionName="${{ steps.version.outputs.name }}" \
+            -PappVersionCode="${{ steps.version.outputs.code }}"
+
+      - name: Check it really is signed
+        run: |
+          APK=$(find app/build/outputs/apk/release -maxdepth 1 -name "*.apk" | head -1)
+          # Several build-tools versions ship on the runner; take the newest.
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs "$APK"
+          # A stable asset name: Obtainium picks an APK out of the release, and
+          # a name that changes shape between releases is one it can mismatch.
+          mv "$APK" "ardoise-${{ steps.version.outputs.name }}.apk"
+
+      - name: Remove the keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ardoise-${{ steps.version.outputs.name }}.apk
+          generate_release_notes: true
+          fail_on_unmatched_files: true

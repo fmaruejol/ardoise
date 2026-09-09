@@ -1,0 +1,420 @@
+<resources>
+
+    <!-- Identical in French, and spelled out so a missing translation stays a
+         missing translation rather than one of these. -->
+    <string name="app_name">Ardoise</string>
+    <string name="group_list_title">Ardoise</string>
+    <string name="server_cloud_title">spliit.app</string>
+    <string name="server_url_placeholder">https://spliit.example.com</string>
+    <string name="expense_amount_hint">0</string>
+
+    <!-- Accueil, premier lancement. -->
+    <string name="home_headline">Partagez ce que\nvous dépensez</string>
+    <string name="home_body">Suivez vos dépenses partagées avec n’importe qui. Sans compte, sans connexion. Un groupe, c’est un lien que vous partagez.</string>
+    <string name="home_disclosure">Ardoise est un client Android open source pour Spliit. Vos groupes sont hébergés sur un serveur Spliit et restent utilisables dans l’app web.</string>
+    <string name="home_create">Créer un groupe</string>
+    <string name="home_join">Scanner ou coller une invitation</string>
+    <string name="home_connected_to">Serveur Spliit · %1$s</string>
+    <string name="home_change_server">Changer</string>
+
+    <!-- Serveur. -->
+    <string name="server_title">Serveur</string>
+    <string name="server_save">Enregistrer</string>
+    <string name="server_body">Ardoise ne stocke rien elle-même. Elle lit et écrit sur un serveur Spliit : l’instance publique, ou la vôtre.</string>
+    <string name="server_cloud_subtitle">L’instance publique</string>
+    <string name="server_self_hosted_title">Auto-hébergé</string>
+    <string name="server_self_hosted_subtitle">Votre propre déploiement</string>
+    <string name="server_url_label">URL de base</string>
+    <string name="server_reachable">Accessible</string>
+    <string name="server_checking">Vérification…</string>
+    <string name="server_test_again">Tester à nouveau</string>
+    <string name="server_test">Tester</string>
+    <string name="server_switch_note">Les groupes appartiennent au serveur qui les héberge. En changeant, %1$s enregistrés pour %2$s sont conservés et reviennent si vous revenez.</string>
+    <plurals name="server_switch_note_groups">
+        <item quantity="one">%1$d groupe</item>
+        <item quantity="other">%1$d groupes</item>
+    </plurals>
+
+    <!-- Pourquoi une adresse saisie est inutilisable. -->
+    <string name="server_url_error_empty">Saisissez l’adresse de votre serveur.</string>
+    <string name="server_url_error_malformed">Cela ne ressemble pas à une adresse web.</string>
+    <string name="server_url_error_missing_host">Il manque un nom de serveur dans cette adresse.</string>
+    <string name="server_url_error_scheme">Seules les adresses http et https fonctionnent.</string>
+
+    <!-- Les échecs remontés par la couche API. -->
+    <string name="error_network">Impossible de joindre ce serveur. Vérifiez l’adresse et votre connexion.</string>
+    <string name="error_http">Ce serveur a répondu par une erreur (%1$d).</string>
+    <string name="error_procedure">Ce serveur a refusé la requête : %1$s</string>
+    <string name="error_malformed">Quelque chose répond à cette adresse, mais ce n’est pas un serveur Spliit.</string>
+    <string name="error_not_found">Ce serveur n’a aucune trace de cet élément. Il a peut-être été supprimé.</string>
+
+    <!-- Accès réseau. Toujours accordé sur Android standard ; révocable sur des
+         versions comme GrapheneOS, où l’app ne peut plus rien faire sans lui. -->
+    <string name="network_permission_title">L’accès réseau est bloqué</string>
+    <string name="network_permission_not_now">Plus tard</string>
+    <string name="network_permission_message">Ardoise garde vos groupes sur un serveur : sans accès réseau, il ne peut rien faire.\n\nAndroid le bloque. Certaines versions, comme GrapheneOS, permettent de couper l’accès réseau app par app. Vous pouvez le rétablir dans les autorisations.</string>
+    <string name="network_permission_allow">Autoriser l’accès réseau</string>
+    <string name="network_permission_blocked">Ardoise ne peut joindre aucun serveur tant que l’accès réseau est bloqué.</string>
+    <string name="open_app_settings">Ouvrir les paramètres de l’app</string>
+
+    <string name="cancel">Annuler</string>
+    <string name="back">Retour</string>
+    <string name="close">Fermer</string>
+
+    <!-- Les groupes connus de cet appareil. -->
+    <string name="group_list_search">Rechercher un groupe</string>
+    <string name="group_list_search_placeholder">Rechercher un groupe</string>
+    <string name="group_list_settings">Paramètres</string>
+    <string name="group_list_new">Nouveau groupe</string>
+    <string name="group_list_join">Rejoindre un groupe</string>
+    <string name="group_list_remove">Retirer</string>
+    <plurals name="group_list_count">
+        <item quantity="one">%1$d groupe sur cet appareil</item>
+        <item quantity="other">%1$d groupes sur cet appareil</item>
+    </plurals>
+    <plurals name="group_list_participants">
+        <item quantity="one">%1$d personne</item>
+        <item quantity="other">%1$d personnes</item>
+    </plurals>
+    <!-- La position de l’utilisateur dans un groupe, sur sa carte. -->
+    <string name="group_list_owed">On vous doit</string>
+    <string name="group_list_owes">Vous devez</string>
+    <string name="group_list_settled">Comptes réglés</string>
+    <string name="group_list_empty_title">Aucun groupe pour l’instant</string>
+    <string name="group_list_empty_body">Créez un groupe pour votre prochain voyage, ou collez le lien qu’on vous a partagé.</string>
+    <string name="group_list_empty_create">Créer un groupe</string>
+    <string name="group_list_empty_join">Rejoindre avec un lien</string>
+    <string name="group_list_no_matches">Aucun groupe ne correspond à « %1$s ».</string>
+    <string name="group_list_remove_title">Retirer %1$s ?</string>
+    <string name="group_list_remove_body">Le groupe n’est retiré que de cet appareil. Il reste en place pour tous les autres. Il vous faudra son lien pour y revenir.</string>
+
+    <!-- Rejoindre un groupe. -->
+    <string name="join_title">Rejoindre un groupe</string>
+    <string name="join_scan_title">Scannez le QR code du groupe</string>
+    <string name="join_scan_body">Le scanner a besoin d’accéder à votre caméra.\nRien n’est enregistré ni envoyé.</string>
+    <string name="join_scan_open">Ouvrir le scanner</string>
+    <!-- Le scanner en plein écran. -->
+    <string name="scan_full_title">Scanner le QR code</string>
+    <string name="scan_full_hint">Placez tout le QR code dans le cadre</string>
+    <string name="scan_full_use_link">Utiliser un lien</string>
+    <string name="scan_full_torch_on">Allumer la lumière</string>
+    <string name="scan_full_torch_off">Éteindre la lumière</string>
+    <string name="join_or">OU</string>
+    <string name="join_link_label">Lien du groupe</string>
+    <string name="join_link_placeholder">Collez le lien d’invitation</string>
+    <string name="join_paste">Coller</string>
+    <string name="join_confirm">Rejoindre le groupe</string>
+    <string name="join_error_not_a_link">Cela ne ressemble pas à un lien de groupe Spliit.</string>
+    <string name="join_error_not_found">Ce serveur n’a aucun groupe correspondant à ce lien. Vérifiez que vous êtes connecté au bon serveur.</string>
+    <string name="join_camera_off_body">Le scan nécessite la caméra. Vous pouvez aussi coller le lien du groupe ci-dessous.</string>
+    <string name="join_camera_failed">La caméra n’a pas pu démarrer. Collez le lien du groupe ci-dessous.</string>
+    <string name="join_no_camera">Cet appareil n’a pas de caméra : collez le lien du groupe ci-dessous.</string>
+
+    <!-- Créer un groupe. -->
+    <string name="create_group_title">Nouveau groupe</string>
+    <string name="create_group_save">Enregistrer</string>
+    <string name="create_group_name_label">Nom du groupe</string>
+    <string name="create_group_currency_label">Devise</string>
+    <string name="create_group_participants">Participants</string>
+    <string name="create_group_information_label">Informations du groupe</string>
+    <string name="create_group_information_placeholder">Ce que le groupe doit savoir : adresse, règles de la maison, cagnotte.</string>
+    <string name="create_group_add_participant">Ajouter un participant</string>
+    <string name="create_group_remove_participant">Retirer %1$s</string>
+    <string name="create_group_participant_label">Nom</string>
+    <string name="create_group_error_you">Indiquez quel participant vous êtes.</string>
+    <string name="create_group_error_name">Le nom du groupe doit faire 2 à 50 caractères.</string>
+    <string name="create_group_error_participant">Chaque participant a besoin d’un nom de 2 à 50 caractères.</string>
+    <string name="create_group_error_duplicate">Deux participants ne peuvent pas porter le même nom.</string>
+
+    <!-- Quel participant du groupe est l’utilisateur. Gardé sur cet appareil :
+         le serveur n’a pas de comptes, il n’y a donc personne à prévenir. -->
+    <string name="which_is_you_label">Qui êtes-vous</string>
+    <string name="which_is_you_help">Gardé sur cet appareil. Sert à présélectionner « Payé par » et à calculer votre solde.</string>
+    <string name="which_is_you_title">Qui êtes-vous ?</string>
+    <string name="which_is_you_value">%1$s · présélectionné dans « Payé par »</string>
+    <string name="which_is_you_unset">Non défini. Choisissez-vous pour voir votre solde</string>
+    <string name="which_is_you_none">Personne pour l’instant</string>
+
+    <!-- Les dépenses d’un groupe. -->
+    <string name="group_search">Rechercher une dépense</string>
+    <string name="group_search_placeholder">Rechercher une dépense</string>
+    <string name="group_search_none">Aucune dépense ne correspond à « %1$s ».</string>
+    <string name="group_more">Plus</string>
+    <string name="group_total_spent">Total dépensé</string>
+    <!-- La liste avant que quiconque ait dit quel participant il est. -->
+    <string name="group_identity_title">Dites-nous qui vous êtes</string>
+    <string name="group_identity_body">Choisissez votre nom dans ce groupe pour voir votre part et votre solde.</string>
+    <string name="group_identity_action">Choisir mon nom</string>
+    <string name="group_your_share">Votre part</string>
+    <string name="group_your_share_unknown">-</string>
+    <string name="group_load_more">Afficher les dépenses plus anciennes</string>
+    <string name="group_expense_subtitle">%1$s a payé · %2$s</string>
+    <plurals name="group_expense_split">
+        <item quantity="one">partagé avec %1$d personne</item>
+        <item quantity="other">partagé en %1$d parts</item>
+    </plurals>
+    <string name="expense_reimbursement">C’est un remboursement</string>
+    <string name="expense_reimbursement_body">Un paiement entre deux personnes</string>
+    <string name="group_empty_title">Aucune dépense pour l’instant</string>
+    <string name="group_empty_body">Ajoutez la première : tout le groupe la verra aussitôt.</string>
+    <string name="group_empty_invite">Invitez d’abord les autres</string>
+
+    <!-- Les trois vues d’un groupe, dans la barre du bas. -->
+    <string name="tab_expenses">Dépenses</string>
+    <string name="tab_balances">Soldes</string>
+    <string name="tab_activity">Activité</string>
+
+    <!-- Filtrer la liste. -->
+    <string name="filter_category">Catégorie</string>
+    <string name="filter_paid_by">Payé par</string>
+    <string name="filter_anyone">Tout le monde</string>
+    <string name="filter_any_category">Toutes catégories</string>
+    <string name="filter_date">Date</string>
+    <string name="filter_any_time">Toutes les dates</string>
+    <string name="filter_this_month">Ce mois-ci</string>
+    <string name="filter_last_30_days">30 derniers jours</string>
+    <string name="filter_this_year">Cette année</string>
+    <string name="filter_none">Aucun résultat pour ces filtres.</string>
+    <plurals name="filter_matches">
+        <item quantity="one">%1$d dépense trouvée · %2$s</item>
+        <item quantity="other">%1$d dépenses trouvées · %2$s</item>
+    </plurals>
+
+    <!-- Soldes. -->
+    <string name="balances_title">Soldes</string>
+    <string name="balances_your_position">Votre position</string>
+    <string name="balances_settled">Tout le monde est à jour</string>
+    <string name="balances_unknown">Indiquez quel participant vous êtes pour voir votre position</string>
+    <plurals name="balances_owe_you">
+        <item quantity="one">%1$d personne vous doit de l’argent</item>
+        <item quantity="other">%1$d personnes vous doivent de l’argent</item>
+    </plurals>
+    <plurals name="balances_you_owe">
+        <item quantity="one">Vous devez de l’argent à %1$d personne</item>
+        <item quantity="other">Vous devez de l’argent à %1$d personnes</item>
+    </plurals>
+    <string name="balances_settle_up">Régler les comptes</string>
+    <string name="balances_empty">Rien à équilibrer tant qu’il n’y a pas de dépense.</string>
+
+    <!-- Régler les comptes. -->
+    <string name="settle_title">Régler les comptes</string>
+    <plurals name="settle_intro">
+        <item quantity="one">%1$d virement suffit à équilibrer le groupe. Marquez-le comme payé pour préremplir un remboursement que vous pourrez vérifier avant d’enregistrer.</item>
+        <item quantity="other">%1$d virements équilibrent le groupe. Marquez-en un comme payé pour préremplir un remboursement que vous pourrez vérifier avant d’enregistrer.</item>
+    </plurals>
+    <string name="settle_none">Rien à régler. Le groupe est déjà équilibré.</string>
+    <string name="settle_pays_you">%1$s vous paie</string>
+    <string name="settle_you_pay">Vous payez %1$s</string>
+    <string name="settle_pays">%1$s paie %2$s</string>
+    <string name="settle_clears_both">solde les deux comptes</string>
+    <string name="settle_clears_one">solde le compte de %1$s</string>
+    <string name="settle_clears_you">solde votre compte</string>
+    <string name="settle_partial">partiel, %1$s restant</string>
+    <string name="settle_mark_paid">Marquer comme payé</string>
+    <!--
+      Le nom d’un remboursement enregistré depuis l’écran de règlement. Comme
+      en amont, il vient
+      des traductions et non des deux noms, pour que le client web et celui-ci
+      disent la même chose.
+    -->
+    <string name="expense_reimbursement_title">Remboursement</string>
+
+    <!-- Totaux. -->
+    <string name="totals_title">Totaux</string>
+    <plurals name="totals_spent_in">
+        <item quantity="one">Dépensé en %1$d jour</item>
+        <item quantity="other">Dépensé en %1$d jours</item>
+    </plurals>
+    <string name="totals_per_person">%1$s par personne · %2$s par jour et par personne</string>
+    <string name="totals_by_category">Par catégorie</string>
+    <string name="totals_who_paid">Qui a le plus payé</string>
+    <string name="totals_uncategorised">Sans catégorie</string>
+    <string name="totals_empty">Rien à totaliser tant qu’il n’y a pas de dépense.</string>
+
+    <!-- Activité. -->
+    <string name="activity_title">Activité</string>
+    <string name="activity_today">Aujourd’hui</string>
+    <string name="activity_yesterday">Hier</string>
+    <string name="activity_empty">Il ne s’est encore rien passé dans ce groupe.</string>
+    <string name="activity_created">%1$s a ajouté %2$s</string>
+    <string name="activity_created_by_you">Vous avez ajouté %1$s</string>
+    <string name="activity_updated">%1$s a modifié %2$s</string>
+    <string name="activity_updated_by_you">Vous avez modifié %1$s</string>
+    <string name="activity_deleted">%1$s a supprimé %2$s</string>
+    <string name="activity_deleted_by_you">Vous avez supprimé %1$s</string>
+    <string name="activity_group">%1$s a modifié le groupe</string>
+    <string name="activity_group_by_you">Vous avez modifié le groupe</string>
+    <string name="activity_unknown">%1$s a fait quelque chose que cette app ne connaît pas</string>
+    <string name="activity_someone">Quelqu’un</string>
+    <string name="activity_untitled">une dépense</string>
+    <string name="activity_load_more">Afficher l’activité plus ancienne</string>
+
+    <!-- Pas de connexion. -->
+    <string name="offline_banner">Hors ligne. Dernière copie synchronisée</string>
+    <string name="offline_retry">Réessayer</string>
+    <string name="outbox_section">En attente d’envoi</string>
+    <string name="outbox_row_waiting">En attente d’envoi</string>
+    <string name="outbox_queued">Enregistré. L’envoi se fera dès votre retour en ligne.</string>
+
+    <!-- Une dépense, en lecture. -->
+    <string name="expense_edit">Modifier</string>
+    <string name="expense_detail_paid_by">%1$s · payé par %2$s</string>
+    <string name="expense_detail_paid_by_you">vous</string>
+    <plurals name="expense_detail_split_evenly">
+        <item quantity="one">Partagé équitablement, %1$d personne</item>
+        <item quantity="other">Partagé équitablement, %1$d parts</item>
+    </plurals>
+    <plurals name="expense_detail_split_amount">
+        <item quantity="one">Partagé par montant, %1$d personne</item>
+        <item quantity="other">Partagé par montant, %1$d parts</item>
+    </plurals>
+    <plurals name="expense_detail_split_shares">
+        <item quantity="one">Partagé par parts, %1$d personne</item>
+        <item quantity="other">Partagé par parts, %1$d parts</item>
+    </plurals>
+    <plurals name="expense_detail_split_percent">
+        <item quantity="one">Partagé en pourcentage, %1$d personne</item>
+        <item quantity="other">Partagé en pourcentage, %1$d parts</item>
+    </plurals>
+
+    <!-- Le formulaire de dépense. -->
+    <string name="expense_add">Ajouter une dépense</string>
+    <string name="expense_new_title">Nouvelle dépense</string>
+    <string name="expense_edit_title">Modifier la dépense</string>
+    <string name="expense_save">Enregistrer</string>
+    <string name="expense_delete">Supprimer</string>
+    <string name="expense_delete_title">Supprimer cette dépense ?</string>
+    <string name="expense_delete_body">Elle disparaît pour tout le groupe, et tous les soldes changent avec elle.</string>
+    <string name="expense_title_label">Titre</string>
+    <string name="expense_category">Catégorie</string>
+    <string name="expense_category_none">Général</string>
+    <string name="expense_date">Date</string>
+    <string name="expense_paid_by">Payé par</string>
+    <string name="expense_split">Partage</string>
+    <string name="expense_note">Note</string>
+    <string name="expense_note_label">Note</string>
+
+    <!-- Une dépense qui se répète. La prochaine copie est une prédiction,
+         et n’est nommée que tant qu’elle est encore à venir. -->
+    <string name="expense_detail_recurrence">Récurrence</string>
+    <string name="expense_detail_recurrence_next">Prochaine copie le %1$s</string>
+
+    <!-- L’écran de détail quand la dépense est un remboursement. -->
+    <string name="expense_detail_reimbursement">Remboursement</string>
+    <string name="expense_detail_transfer">Transfert</string>
+    <string name="expense_detail_paid">Payé</string>
+    <string name="expense_detail_received">Reçu</string>
+    <string name="expense_detail_reimbursement_note">Les remboursements déplacent de l’argent entre deux personnes. Ils ne comptent ni dans le total du groupe ni dans les statistiques.</string>
+    <string name="expense_not_found">Cette dépense n’existe plus.</string>
+    <string name="expense_error_title">Donnez un titre à la dépense.</string>
+    <string name="expense_error_amount">Saisissez un montant.</string>
+    <string name="expense_error_nobody">Choisissez au moins une personne avec qui la partager.</string>
+    <string name="expense_error_rate">Indiquez le taux de change de cette dépense.</string>
+    <string name="expense_error_split_amount">Les parts totalisent %1$s, et non %2$s.</string>
+    <string name="expense_error_split_percent">Les pourcentages totalisent %1$s, et non 100%%.</string>
+
+    <!-- Une dépense payée dans une autre devise. Le taux se lit
+         « 1 devise d’origine = taux devise du groupe », comme sur le serveur
+         et dans le client web. -->
+    <string name="expense_converted">= %1$s · 1 %2$s = %3$s %4$s</string>
+    <string name="expense_rate_needed">Indiquer un taux de change</string>
+    <string name="rate_title">Taux de change</string>
+    <string name="rate_body">Combien de %1$s vaut 1 %2$s. Utilisé pour cette dépense uniquement.</string>
+    <string name="rate_label">1 %1$s =</string>
+    <string name="rate_becomes">%1$s deviennent</string>
+    <string name="rate_use_today">Utiliser le taux du jour</string>
+    <string name="rate_use_on">Utiliser le taux du %1$s</string>
+    <string name="rate_unavailable">Aucun taux pour ce jour-là. Saisissez-le.</string>
+
+    <!-- Ce qu’une dépense en devise étrangère valait avant conversion. -->
+    <string name="expense_detail_converted">%1$s · 1 %2$s = %3$s %4$s</string>
+
+    <!-- Récurrence. Le serveur ne connaît que NONE/DAILY/WEEKLY/MONTHLY. -->
+    <string name="repeat_title">Répétition</string>
+    <string name="repeat_chip">Récurrente</string>
+    <string name="repeat_none">Ne se répète pas</string>
+    <string name="repeat_daily">Tous les jours</string>
+    <string name="repeat_weekly">Toutes les semaines</string>
+    <string name="repeat_monthly">Tous les mois</string>
+    <string name="repeat_next">Prochaines occurrences</string>
+    <!-- Les mêmes règles, en un mot, pour la puce de l’écran de détail. -->
+    <string name="repeat_short_daily">Quotidienne</string>
+    <string name="repeat_short_weekly">Hebdomadaire</string>
+    <string name="repeat_short_monthly">Mensuelle</string>
+    <string name="repeat_note">Les nouvelles copies apparaissent dans la liste le jour même, pas à l’avance.</string>
+
+    <!-- L’éditeur de partage. -->
+    <string name="split_title">Partager %1$s</string>
+    <string name="split_done">Terminé</string>
+    <string name="split_evenly">Équitablement</string>
+    <string name="split_amount">Montant</string>
+    <string name="split_shares">Parts</string>
+    <string name="split_percent">Pourcentage</string>
+    <string name="split_assigned">Attribué</string>
+    <string name="split_assigned_value">%1$s sur %2$s</string>
+    <string name="split_assigned_percent">%1$s sur 100%%</string>
+    <string name="split_you">%1$s (vous)</string>
+    <string name="split_excluded_one">%1$s est exclu de cette dépense.</string>
+    <string name="split_excluded_many">%1$s sont exclus de cette dépense.</string>
+    <plurals name="split_summary_evenly">
+        <item quantity="one">Équitablement, %1$d personne</item>
+        <item quantity="other">Équitablement, %1$d personnes</item>
+    </plurals>
+    <plurals name="split_summary_amount">
+        <item quantity="one">Par montant, %1$d personne</item>
+        <item quantity="other">Par montant, %1$d personnes</item>
+    </plurals>
+    <plurals name="split_summary_shares">
+        <item quantity="one">Par parts, %1$d personne</item>
+        <item quantity="other">Par parts, %1$d personnes</item>
+    </plurals>
+    <plurals name="split_summary_percent">
+        <item quantity="one">En pourcentage, %1$d personne</item>
+        <item quantity="other">En pourcentage, %1$d personnes</item>
+    </plurals>
+
+    <!-- Paramètres du groupe. -->
+    <string name="group_settings_title">Paramètres du groupe</string>
+    <string name="group_settings_save">Enregistrer</string>
+    <string name="group_settings_invite">Inviter dans %1$s</string>
+    <string name="group_settings_invite_subtitle">Toute personne ayant le lien peut modifier</string>
+    <string name="group_settings_share">Partager le lien d’invitation</string>
+    <string name="group_settings_share_text">Rejoignez « %1$s » sur Spliit : %2$s</string>
+    <string name="group_settings_name_label">Nom du groupe</string>
+    <string name="group_settings_information_label">Informations du groupe</string>
+    <string name="group_settings_participants">Participants · %1$d</string>
+    <string name="group_settings_this_is_me">C’est moi</string>
+    <string name="group_settings_add_participant">Ajouter un participant</string>
+    <string name="group_settings_on_this_device">Sur cet appareil</string>
+    <string name="group_settings_remove">Retirer le groupe de cet appareil</string>
+    <string name="group_settings_remove_participant">Retirer %1$s</string>
+    <string name="group_settings_participant_has_expenses">%1$s figure sur une dépense : le retirer changerait ce que chacun doit. Traitez d’abord ces dépenses.</string>
+    <string name="group_settings_not_found">Ce serveur n’a plus de groupe correspondant à ce lien.</string>
+
+    <!-- Paramètres de l’app. -->
+    <string name="settings_title">Paramètres</string>
+    <string name="settings_appearance">Apparence</string>
+    <string name="settings_theme">Thème</string>
+    <string name="settings_theme_system">Par défaut du système</string>
+    <string name="settings_theme_light">Clair</string>
+    <string name="settings_theme_dark">Sombre</string>
+    <string name="settings_language">Langue</string>
+    <string name="settings_language_system">Langue du système</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_french">Français</string>
+    <string name="settings_defaults">Valeurs par défaut</string>
+    <string name="settings_currency">Devise des nouveaux groupes</string>
+    <string name="settings_data">Données</string>
+    <string name="settings_server">Serveur</string>
+    <string name="settings_about">À propos de cette app</string>
+
+    <!-- À propos. -->
+    <string name="about_title">À propos</string>
+    <string name="about_version">Version %1$s (build %2$d)</string>
+    <string name="about_disclaimer">Un client non officiel, sans affiliation avec le projet Spliit ni ses mainteneurs, et sans leur approbation. Il utilise la même API ouverte : vos groupes restent utilisables dans l’app web.</string>
+    <string name="about_source">Code source</string>
+    <string name="about_report">Signaler un problème</string>
+    <string name="about_support">Soutenir le projet Spliit</string>
+    <string name="about_project">Le projet Spliit</string>
+
+</resources>

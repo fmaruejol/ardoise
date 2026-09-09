@@ -1,0 +1,27 @@
+*.iml
+.gradle
+/local.properties
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Signing. The release key is the one thing here that cannot be regenerated:
+# Android refuses to update an app whose signature changed, and this app's
+# group ids cannot be recovered once an install is gone. Keep it out of the
+# repo and out of the build directory.
+*.jks
+*.keystore
+*.p12
+keystore.properties
+signing.properties
+
+# Personal Claude Code overrides. .claude/settings.json is shared on purpose;
+# this one is machine-specific.
+.claude/settings.local.json
+
+# IDE config. Style is enforced by Spotless and .editorconfig, which every
+# editor reads, so nothing here needs Android Studio's own files.
+.idea/

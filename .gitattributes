@@ -1,0 +1,15 @@
+# Spotless enforces LF (`lineEndings = LineEnding.UNIX` in build.gradle.kts).
+# Without this, Git on Windows checks files out as CRLF and Spotless rewrites
+# them back, so every file reads as modified on a fresh clone.
+* text=auto eol=lf
+
+# The Windows launcher is the exception: cmd.exe wants CRLF.
+gradlew.bat text eol=crlf
+
+# Never touched, never diffed as text.
+*.jar   binary
+*.png   binary
+*.webp  binary
+*.apk   binary
+*.jks    binary
+*.keystore binary

@@ -1,0 +1,51 @@
+name: CI
+
+# Everything that runs without a device. The instrumented suite needs an
+# emulator and is not run here; see `connectedDebugAndroidTest` in the README.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Formatting first: it is the cheapest failure and the one most likely
+      # to be a whole-file diff, which would bury a real one.
+      - name: Format
+        run: ./gradlew spotlessCheck
+
+      - name: Test
+        run: ./gradlew testDebugUnitTest test
+
+      - name: Lint
+        run: ./gradlew lint
+
+      # An unsigned build, which is what a clone without the release key gets.
+      # Catches anything that compiles in debug but not in release.
+      - name: Build
+        run: ./gradlew assembleDebug assembleRelease
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            **/build/reports/tests/
+            app/build/reports/lint-results-debug.html
+          retention-days: 7

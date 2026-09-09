@@ -1,0 +1,8 @@
+# type(scope): subject          <- imperative, under 72 chars, no full stop
+#
+# type:  feat fix refactor perf test docs build ci chore
+# scope: the area, not the file — expense balances group server outbox
+#        cache icon ci — omitted when the change is not about one area
+#
+# Body only when the "why" would otherwise be lost. Wrap at 72.
+# Never list changed files or restate the diff; git show does both.

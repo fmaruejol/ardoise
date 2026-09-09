@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Cleartext is permitted because the instance is the user's own. A
+    self-hosted Spliit on a LAN commonly has no certificate, `BaseUrl` accepts
+    `http` for exactly that reason, and from Android 9 the platform default
+    would otherwise refuse the connection: the address would be accepted and
+    then every request would fail as "check your connection".
+
+    The trust anchors are named rather than left to the default so that this
+    stays the only thing being relaxed: system CAs only, no user-installed
+    ones, which is the API 28+ default and is what keeps an added certificate
+    from being able to read traffic to a group.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

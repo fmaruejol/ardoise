@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The dark scheme's surface, for a phone whose system is dark. -->
+    <color name="window_background">#0E1513</color>
+</resources>
