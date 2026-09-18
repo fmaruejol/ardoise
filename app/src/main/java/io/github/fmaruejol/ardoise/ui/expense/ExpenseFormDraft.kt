@@ -16,6 +16,7 @@ data class ExpenseFormDraft(
     val splitMode: String,
     val paidFor: Map<String, Long>,
     val splitText: Map<String, String>,
+    val splitFree: Set<String>,
     val notes: String,
     val showNotes: Boolean,
     val recurrenceRule: String,

@@ -119,6 +119,12 @@ data class ExpenseFormUiState(
     val paidFor: Map<String, Long> = emptyMap(),
     /** What is typed in the split editor, before it becomes a share. */
     val splitText: Map<String, String> = emptyMap(),
+    /**
+     * The rows nobody has typed in, which [rebalance] fills. Empty for an
+     * expense read back from the server: those numbers are somebody's, not
+     * the editor's to move.
+     */
+    val splitFree: Set<String> = emptySet(),
     val notes: String = "",
     val showNotes: Boolean = false,
     /** The server creates the copies on the day; this only says what it should do. */
@@ -408,6 +414,7 @@ class ExpenseFormViewModel(
         splitMode = splitMode.name,
         paidFor = paidFor,
         splitText = splitText,
+        splitFree = splitFree,
         notes = notes,
         showNotes = showNotes,
         recurrenceRule = recurrenceRule.name,
@@ -428,6 +435,7 @@ class ExpenseFormViewModel(
             splitMode = enumOrNull<SplitMode>(draft.splitMode) ?: splitMode,
             paidFor = draft.paidFor.filterKeys { it in ids },
             splitText = draft.splitText.filterKeys { it in ids },
+            splitFree = draft.splitFree.filterTo(mutableSetOf()) { it in ids },
             notes = draft.notes,
             showNotes = draft.showNotes,
             recurrenceRule = enumOrNull<RecurrenceRule>(draft.recurrenceRule) ?: recurrenceRule,
@@ -565,7 +573,9 @@ class ExpenseFormViewModel(
     // --- the split editor --------------------------------------------------
 
     fun onSplitEditorOpen() {
-        _state.update { it.copy(editingSplit = true, splitText = it.splitTextFor(it.splitMode)) }
+        _state.update {
+            it.copy(editingSplit = true, splitText = it.splitTextFor(it.splitMode)).rebalance()
+        }
     }
 
     fun onSplitEditorClose() =
@@ -576,13 +586,14 @@ class ExpenseFormViewModel(
             // Carry the people over, not the numbers: a share of 2 means
             // nothing as a percentage. Everyone kept gets an even value.
             val members = current.paidFor.keys.ifEmpty { current.participants.map { it.id }.toSet() }
-            val seeded = current.seed(mode, members)
+            val seeded = seed(mode, members)
             current.copy(
                 splitMode = mode,
                 paidFor = seeded,
                 splitText = current.textFrom(mode, seeded),
+                splitFree = members,
                 errors = current.errors.withoutSplit(),
-            )
+            ).rebalance()
         }
     }
 
@@ -603,8 +614,9 @@ class ExpenseFormViewModel(
             current.copy(
                 splitText = current.splitText + (participantId to text),
                 paidFor = shares,
+                splitFree = current.splitFree - participantId,
                 errors = current.errors.withoutSplit(),
-            )
+            ).rebalance()
         }
     }
 
@@ -776,42 +788,63 @@ class ExpenseFormViewModel(
     private fun ExpenseFormUiState.splitTextFor(mode: SplitMode) = textFrom(mode, paidFor)
 
     private fun ExpenseFormUiState.textFrom(mode: SplitMode, shares: Map<String, Long>) =
-        participants.associate { participant ->
-            val share = shares[participant.id]
-            participant.id to when {
-                share == null -> ""
+        participants.associate { it.id to shareText(mode, shares[it.id]) }
 
-                mode == SplitMode.BY_AMOUNT -> currency.formatPlain(share)
-
-                mode == SplitMode.EVENLY -> ""
-
-                else -> formatForEditing(
-                    BigDecimal(share).divide(BigDecimal(mode.shareScale)),
-                )
-            }
-        }
+    private fun ExpenseFormUiState.shareText(mode: SplitMode, share: Long?): String = when {
+        share == null -> ""
+        mode == SplitMode.BY_AMOUNT -> currency.formatPlain(share)
+        mode == SplitMode.EVENLY -> ""
+        else -> formatForEditing(BigDecimal(share).divide(BigDecimal(mode.shareScale)))
+    }
 
     /**
-     * An even starting point for [members] in [mode], divided by `:core`'s
-     * [distributeAmount], the same largest-remainder split the balances use,
-     * so the form cannot seed a split it would then refuse.
+     * A starting point for [members] in [mode]. The two modes with a required
+     * total are filled in by [rebalance] instead, but start at zero rather
+     * than absent: membership is what says nobody was left out, and there may
+     * be no amount to divide yet.
      */
-    private fun ExpenseFormUiState.seed(mode: SplitMode, members: Set<String>): Map<String, Long> =
-        when (mode) {
-            SplitMode.EVENLY -> members.associateWith { 1L }
+    private fun seed(mode: SplitMode, members: Set<String>): Map<String, Long> = when (mode) {
+        SplitMode.EVENLY -> members.associateWith { 1L }
+        SplitMode.BY_SHARES -> members.associateWith { mode.shareScale }
+        SplitMode.BY_PERCENTAGE, SplitMode.BY_AMOUNT -> members.associateWith { 0L }
+    }
 
-            SplitMode.BY_SHARES -> members.associateWith { mode.shareScale }
+    /**
+     * Gives the rows nobody has typed in whatever [requiredTotal] leaves, so
+     * a percentage split adds to a hundred without anybody doing the
+     * arithmetic in their head.
+     *
+     * **A row that was typed in is never moved**: once every row is somebody's
+     * number, a total that does not add up is theirs to fix, and the editor
+     * says so rather than quietly overruling one of them. Division is `:core`'s
+     * [distributeAmount], the same largest-remainder split the balances use,
+     * so the editor cannot fill in a split the form would then refuse.
+     */
+    private fun ExpenseFormUiState.rebalance(): ExpenseFormUiState {
+        // A required total of zero is an amount nobody has typed yet, which
+        // the amount field is already saying: there is nothing to divide.
+        val required = requiredTotal?.takeIf { it != 0L } ?: return this
+        // In the order the rows are drawn: the leftover minor unit goes to
+        // the first of them.
+        val free = participants.map { it.id }.filter { it in splitFree }
+        if (free.isEmpty()) return this
 
-            // Percentages have a required total, so these add to exactly it.
-            SplitMode.BY_PERCENTAGE -> members.evenly(SplitMode.PERCENT_TOTAL)
-
-            SplitMode.BY_AMOUNT -> members.evenly(amount)
+        val typed = paidFor.filterKeys { it !in splitFree }.values.sum()
+        // Income is negative throughout, so "nothing left" is a floor of zero
+        // one way and a ceiling of zero the other.
+        val left = (required - typed).let {
+            if (required < 0) it.coerceAtMost(0) else it.coerceAtLeast(0)
         }
 
-    /** [total] divided over [this], adding up to exactly [total]. */
-    private fun Set<String>.evenly(total: Long): Map<String, Long> {
-        val ids = toList()
-        return ids.zip(distributeAmount(total, ids.size)).toMap()
+        val filled = free.zip(distributeAmount(left, free.size))
+        return copy(
+            paidFor = paidFor.filterKeys { it !in splitFree } +
+                filled.filter { (_, share) -> share != 0L },
+            splitText = splitText +
+                filled.associate { (id, share) ->
+                    id to shareText(splitMode, share.takeIf { it != 0L })
+                },
+        )
     }
 
     private companion object {

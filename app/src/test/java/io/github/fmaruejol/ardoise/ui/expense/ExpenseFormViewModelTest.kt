@@ -264,6 +264,105 @@ class ExpenseFormViewModelTest {
         assertEquals(3334L, sentInput().paidFor.first { it.participantId == "p1" }.shares)
     }
 
+    // --- the rows nobody typed in -------------------------------------------
+
+    @Test
+    fun `a typed percentage leaves the rest of the rows adding up to a hundred`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel()
+            advanceUntilIdle()
+            viewModel.onAmountChange("100")
+
+            viewModel.onSplitEditorOpen()
+            viewModel.onSplitModeChange(SplitMode.BY_PERCENTAGE)
+            viewModel.onShareChange("p1", "50")
+
+            // The point of the whole thing: nobody works out the last
+            // percentage by hand.
+            val state = viewModel.state.value
+            assertEquals(5000L, state.paidFor["p1"])
+            assertEquals(2500L, state.paidFor["p2"])
+            assertEquals(2500L, state.paidFor["p3"])
+            assertEquals(SplitMode.PERCENT_TOTAL, state.paidFor.values.sum())
+            assertEquals("25", state.splitText["p3"])
+        }
+
+    @Test
+    fun `a typed amount leaves the rest of the rows adding up to the expense`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel()
+            advanceUntilIdle()
+            viewModel.onAmountChange("30")
+
+            viewModel.onSplitEditorOpen()
+            viewModel.onSplitModeChange(SplitMode.BY_AMOUNT)
+            viewModel.onShareChange("p1", "10")
+            viewModel.onShareChange("p2", "13")
+
+            val state = viewModel.state.value
+            assertEquals(700L, state.paidFor["p3"])
+            assertEquals(3000L, state.paidFor.values.sum())
+        }
+
+    @Test
+    fun `a row typed in is never moved again`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onAmountChange("100")
+
+        viewModel.onSplitEditorOpen()
+        viewModel.onSplitModeChange(SplitMode.BY_PERCENTAGE)
+        viewModel.onShareChange("p1", "20")
+        viewModel.onShareChange("p2", "20")
+        viewModel.onShareChange("p3", "20")
+
+        // Every number is now somebody's, so sixty per cent stands and the
+        // form refuses it rather than overruling one of the three.
+        assertEquals(6000L, viewModel.state.value.paidFor.values.sum())
+    }
+
+    @Test
+    fun `a row the total no longer reaches drops out, and comes back`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onAmountChange("100")
+
+        viewModel.onSplitEditorOpen()
+        viewModel.onSplitModeChange(SplitMode.BY_PERCENTAGE)
+        viewModel.onShareChange("p1", "100")
+
+        // Nothing left to give them, which is what typing 0 already means.
+        assertEquals(setOf("p1"), viewModel.state.value.paidFor.keys)
+
+        viewModel.onShareChange("p1", "60")
+
+        // Still nobody's numbers, so they come back.
+        assertEquals(2000L, viewModel.state.value.paidFor["p2"])
+        assertEquals(2000L, viewModel.state.value.paidFor["p3"])
+    }
+
+    @Test
+    fun `an expense read back keeps its own percentages`() = runTest(dispatcher) {
+        api.getExpenseResult = SpliitResult.Success(
+            existing().copy(
+                amount = 10_000,
+                splitMode = SplitMode.BY_PERCENTAGE,
+                paidFor = listOf(PaidFor("p1", 5000), PaidFor("p2", 3000), PaidFor("p3", 2000)),
+            ),
+        )
+        val viewModel = viewModel(expenseId = "e1")
+        advanceUntilIdle()
+
+        viewModel.onSplitEditorOpen()
+        viewModel.onShareChange("p1", "60")
+
+        // Somebody wrote 30 and 20 on purpose; the editor does not rewrite
+        // them to make its own sum work.
+        val state = viewModel.state.value
+        assertEquals(3000L, state.paidFor["p2"])
+        assertEquals(2000L, state.paidFor["p3"])
+    }
+
     @Test
     fun `says so when the amounts do not add up`() = runTest(dispatcher) {
         val viewModel = viewModel()
@@ -836,7 +935,10 @@ class ExpenseFormViewModelTest {
             advanceUntilIdle()
             viewModel.onAmountChange("30")
             viewModel.onSplitModeChange(SplitMode.BY_AMOUNT)
+            // Every row typed in, so none is left for the editor to correct.
             viewModel.onShareChange("p1", "5")
+            viewModel.onShareChange("p2", "5")
+            viewModel.onShareChange("p3", "5")
 
             viewModel.onSave()
             advanceUntilIdle()

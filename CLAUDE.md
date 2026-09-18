@@ -322,6 +322,14 @@ saving, so the user sees which numbers are wrong instead of a `BAD_REQUEST`.
 Changing split mode carries the **people** over, not the numbers; everyone kept
 gets an even value by largest remainder, so three people come to exactly 10000.
 
+**The rows nobody has typed in absorb whatever the required total leaves**, so a
+percentage split adds to 100 without anyone doing the arithmetic. `splitFree` is
+the set of those rows; typing in one takes it out, and an expense read back from
+the server starts with the set empty — those numbers are somebody's, not the
+editor's to move. Once every row is typed a wrong total is reported rather than
+silently corrected, and a free row left nothing drops out of the expense, which
+is what typing 0 already means.
+
 `activeParticipantId` and `paidById` are different: the first is who you are and
 marks "(you)", the second is who paid and only *starts* there.
 
