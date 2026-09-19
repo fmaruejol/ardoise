@@ -397,6 +397,22 @@ platform reporting no network. Without the second, a screen open when the phone
 loses signal sits there looking current. That is the *only* thing the platform's
 answer is read for.
 
+**"No network" means no `NET_CAPABILITY_INTERNET`, never `NET_CAPABILITY_VALIDATED`.**
+Validation comes from a connectivity check the user can switch off — GrapheneOS
+ships a toggle for it — and a working network is then never marked validated, so
+the banner sat over a live connection. A captive portal or a half-open wi-fi is
+covered by the other reason: the read fails, and says why.
+
+**Nothing in the callbacks asks the manager anything.** Inside `onLost` it still
+reports the network being torn down as usable, so flight mode read as online and
+no banner went up at all. `AndroidConnectivity` tracks the network the callbacks
+are about and uses the capabilities it is handed.
+
+**Going offline is only believed once it lasts a second.** Handing over from
+wi-fi to mobile loses the old network ~50ms before the new one arrives, measured;
+a banner for that is a red flash over a phone that was connected throughout.
+Coming back is reported at once.
+
 **The cache is never a source of truth.** Every row came from the server and is
 replaced by the next fetch, which is why the database uses
 `fallbackToDestructiveMigration`. What cannot be re-downloaded — group ids, which
