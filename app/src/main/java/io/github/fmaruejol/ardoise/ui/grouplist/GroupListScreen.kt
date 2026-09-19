@@ -33,6 +33,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -51,6 +52,7 @@ import io.github.fmaruejol.ardoise.core.model.GroupSummary
 import io.github.fmaruejol.ardoise.ui.components.EmptyMessage
 import io.github.fmaruejol.ardoise.ui.components.EmptyStateMark
 import io.github.fmaruejol.ardoise.ui.components.OfflineBanner
+import io.github.fmaruejol.ardoise.ui.components.PullableCenter
 import io.github.fmaruejol.ardoise.ui.components.SectionLabel
 import io.github.fmaruejol.ardoise.ui.describe
 import org.koin.androidx.compose.koinViewModel
@@ -166,7 +168,9 @@ fun GroupListScreen(
             }
         },
     ) { padding ->
-        Box(
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
@@ -174,16 +178,14 @@ fun GroupListScreen(
             when {
                 state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
 
-                state.isEmpty -> NoGroupsYet(
-                    onCreateGroup = onCreateGroup,
-                    onJoinGroup = onJoinGroup,
-                    modifier = Modifier.align(Alignment.Center),
-                )
+                state.isEmpty -> PullableCenter {
+                    NoGroupsYet(onCreateGroup = onCreateGroup, onJoinGroup = onJoinGroup)
+                }
 
                 else -> GroupList(
                     state = state,
                     onGroupClick = onGroupClick,
-                    onRetry = onRefresh,
+                    onRefresh = onRefresh,
                 )
             }
         }
@@ -243,7 +245,7 @@ private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
 private fun GroupList(
     state: GroupListUiState,
     onGroupClick: (String) -> Unit,
-    onRetry: () -> Unit,
+    onRefresh: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -254,7 +256,7 @@ private fun GroupList(
         // groups the user was already reading.
         if (state.error != null || state.isOffline) {
             item {
-                OfflineBanner(error = state.error, onRetry = onRetry)
+                OfflineBanner(error = state.error, onRetry = onRefresh)
             }
         }
 

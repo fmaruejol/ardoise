@@ -213,6 +213,26 @@ class GroupViewModelTest {
     }
 
     @Test
+    fun `pulling on a search runs the search again`() = runTest(dispatcher) {
+        list(expense("e1", "Dinner", 9600, "2026-09-11"))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onSearchOpen()
+        viewModel.onQueryChange("dinner")
+        advanceUntilIdle()
+        val before = api.callsTo("listExpenses").size
+
+        list(expense("e1", "Dinner", 9600, "2026-09-11"), expense("e2", "Dinner two", 500, "2026-09-12"))
+        viewModel.onRefresh()
+        advanceUntilIdle()
+
+        // A search is not cached, so the read is the request.
+        assertEquals("dinner", api.callsTo("listExpenses").last().arguments[3])
+        assertEquals(before + 1, api.callsTo("listExpenses").size)
+        assertEquals(2, viewModel.state.value.days.sumOf { it.expenses.size })
+    }
+
+    @Test
     fun `says when a search matches nothing rather than looking empty`() = runTest(dispatcher) {
         list(expense("e1", "Dinner", 9600, "2026-09-11"))
         val viewModel = viewModel()

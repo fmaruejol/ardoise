@@ -108,6 +108,26 @@ class GroupListViewModelTest {
     }
 
     @Test
+    fun `the pull indicator stays up until the refresh answers`() = runTest(dispatcher) {
+        preferences.rememberGroup("g1")
+        api.listGroupsResult = SpliitResult.Success(listOf(groupSummary("g1", "Trip")))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        assertFalse(viewModel.state.value.isRefreshing)
+
+        val held = api.hold("listGroups")
+        viewModel.onRefresh()
+        advanceUntilIdle()
+
+        // The cached rows are already back; the request is not.
+        assertTrue(viewModel.state.value.isRefreshing)
+
+        held.complete(Unit)
+        advanceUntilIdle()
+        assertFalse(viewModel.state.value.isRefreshing)
+    }
+
+    @Test
     fun `an empty list is not an error state`() = runTest(dispatcher) {
         val viewModel = viewModel()
         advanceUntilIdle()

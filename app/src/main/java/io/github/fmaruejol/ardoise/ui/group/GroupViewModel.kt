@@ -18,8 +18,10 @@ import io.github.fmaruejol.ardoise.data.Connectivity
 import io.github.fmaruejol.ardoise.data.ExpenseRepository
 import io.github.fmaruejol.ardoise.data.GroupRepository
 import io.github.fmaruejol.ardoise.data.PendingExpense
+import io.github.fmaruejol.ardoise.data.RefreshScope
 import io.github.fmaruejol.ardoise.ui.Retry
 import io.github.fmaruejol.ardoise.ui.collectOffline
+import io.github.fmaruejol.ardoise.ui.collectRefreshing
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -107,6 +109,7 @@ data class GroupUiState(
     val pickingYou: Boolean = false,
     /** Read only to raise the offline banner over rows from the cache. */
     val isOffline: Boolean = false,
+    val isRefreshing: Boolean = false,
     val error: SpliitError? = null,
 ) {
     /**
@@ -138,6 +141,14 @@ data class GroupUiState(
         get() = participants.firstOrNull { it.id == filters.payerId }?.name
 }
 
+/** One read of the feed: [combine] stops at three. */
+private data class Feed(
+    val text: String,
+    val limit: Int,
+    val filters: ExpenseFilters,
+    val scope: RefreshScope,
+)
+
 /**
  * A group's expenses, grouped by day and showing what each did to this
  * device's own balance, the reason the app asks which participant you are.
@@ -161,6 +172,7 @@ class GroupViewModel(
 
     init {
         collectOffline(connectivity, _state) { copy(isOffline = it) }
+        collectRefreshing(retry, _state) { copy(isRefreshing = it) }
     }
 
     init {
@@ -193,17 +205,20 @@ class GroupViewModel(
                     .distinctUntilChanged(),
                 pageSize,
                 filters,
-                retry.attempts,
-            ) { text, limit, active, _ -> Triple(text, limit, active) }
-                .flatMapLatest { (text, limit, active) ->
-                    expenses.expenses(
-                        groupId = groupId,
-                        // The chips are applied here; the server only filters
-                        // on text, and "2 matching expenses" has to be a count
-                        // across the whole group.
-                        limit = if (active.isActive) ALL_EXPENSES else limit,
-                        filter = text.trim().takeIf { it.isNotEmpty() },
-                    ).map { it to active }
+                retry.restarts,
+            ) { text, limit, active, scope -> Feed(text, limit, active, scope) }
+                .flatMapLatest { (text, limit, active, scope) ->
+                    retry.track(
+                        scope,
+                        expenses.expenses(
+                            groupId = groupId,
+                            // The chips are applied here; the server only
+                            // filters on text, and "2 matching expenses" has
+                            // to be a count across the whole group.
+                            limit = if (active.isActive) ALL_EXPENSES else limit,
+                            filter = text.trim().takeIf { it.isNotEmpty() },
+                        ).map { it to active },
+                    )
                 }
                 .collect { (result, active) ->
                     _state.update { current ->

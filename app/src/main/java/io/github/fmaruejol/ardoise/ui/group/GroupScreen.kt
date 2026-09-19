@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -16,6 +17,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,7 +69,7 @@ fun GroupRoute(
         onPayerFilter = viewModel::onPayerFilter,
         onDateFilter = viewModel::onDateFilter,
         onLoadMore = viewModel::onLoadMore,
-        onRetry = viewModel::onRefresh,
+        onRefresh = viewModel::onRefresh,
         modifier = modifier,
         bottomBar = bottomBar,
     )
@@ -96,7 +98,7 @@ fun GroupScreen(
     onPayerFilter: (String?) -> Unit,
     onDateFilter: (DateFilter) -> Unit,
     onLoadMore: () -> Unit,
-    onRetry: () -> Unit,
+    onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
@@ -176,30 +178,38 @@ fun GroupScreen(
             // Above the feed rather than in it: it is about all the rows
             // below, and a row of its own would scroll away from them.
             if (state.error != null || state.isOffline) {
-                OfflineBanner(error = state.error, onRetry = onRetry)
+                OfflineBanner(error = state.error, onRetry = onRefresh)
             }
 
-            Box(Modifier.fillMaxSize()) {
+            PullToRefreshBox(
+                isRefreshing = state.isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize(),
+            ) {
                 when {
                     state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
 
-                    state.isEmpty -> Column(Modifier.fillMaxSize()) {
+                    // A list, not a Column: only a scrollable hands the pull
+                    // gesture to the indicator.
+                    state.isEmpty -> LazyColumn(Modifier.fillMaxSize()) {
                         if (state.needsIdentity) {
-                            IdentityPrompt(
-                                onChoose = onPickYouOpen,
-                                modifier = Modifier.padding(16.dp),
-                            )
+                            item {
+                                IdentityPrompt(
+                                    onChoose = onPickYouOpen,
+                                    modifier = Modifier.padding(16.dp),
+                                )
+                            }
                         }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            NoExpensesYet(
-                                onAddExpense = onAddExpense,
-                                onInvite = onGroupSettings,
-                            )
+                        item {
+                            Box(
+                                modifier = Modifier.fillParentMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                NoExpensesYet(
+                                    onAddExpense = onAddExpense,
+                                    onInvite = onGroupSettings,
+                                )
+                            }
                         }
                     }
 

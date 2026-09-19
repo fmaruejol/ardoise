@@ -11,6 +11,7 @@ import io.github.fmaruejol.ardoise.data.Connectivity
 import io.github.fmaruejol.ardoise.data.GroupRepository
 import io.github.fmaruejol.ardoise.ui.Retry
 import io.github.fmaruejol.ardoise.ui.collectOffline
+import io.github.fmaruejol.ardoise.ui.collectRefreshing
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,6 +49,7 @@ data class ActivityUiState(
     val hasMore: Boolean = false,
     /** Read only to raise the offline banner over rows from the cache. */
     val isOffline: Boolean = false,
+    val isRefreshing: Boolean = false,
     val error: SpliitError? = null,
 ) {
     val isEmpty: Boolean get() = !isLoading && days.isEmpty() && error == null
@@ -76,17 +78,21 @@ class ActivityViewModel(
 
     init {
         collectOffline(connectivity, _state) { copy(isOffline = it) }
+        collectRefreshing(retry, _state) { copy(isRefreshing = it) }
     }
 
     init {
         viewModelScope.launch {
-            combine(pageSize, retry.attempts) { limit, _ -> limit }
-                .flatMapLatest { limit ->
-                    combine(
-                        groups.group(groupId),
-                        activities.activities(groupId, limit),
-                        groups.activeParticipantId(groupId),
-                    ) { group, result, active -> Triple(group, result, active) }
+            combine(pageSize, retry.restarts) { limit, scope -> limit to scope }
+                .flatMapLatest { (limit, scope) ->
+                    retry.track(
+                        scope,
+                        combine(
+                            groups.group(groupId),
+                            activities.activities(groupId, limit),
+                            groups.activeParticipantId(groupId),
+                        ) { group, result, active -> Triple(group, result, active) },
+                    )
                 }
                 .collect { (groupResult, pageResult, active) ->
                     val names = (groupResult as? SpliitResult.Success)?.value
@@ -123,7 +129,7 @@ class ActivityViewModel(
         pageSize.update { it + PAGE_STEP }
     }
 
-    fun onRetry() = retry.again()
+    fun onRefresh() = retry.again()
 
     private fun List<Activity>.toDays(
         names: Map<String, String>,

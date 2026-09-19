@@ -26,6 +26,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -43,6 +44,7 @@ import io.github.fmaruejol.ardoise.ui.components.IdentityPrompt
 import io.github.fmaruejol.ardoise.ui.components.InitialAvatar
 import io.github.fmaruejol.ardoise.ui.components.OfflineBanner
 import io.github.fmaruejol.ardoise.ui.components.ParticipantPickerDialog
+import io.github.fmaruejol.ardoise.ui.components.PullableCenter
 import io.github.fmaruejol.ardoise.ui.group.GroupOverflowMenu
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -67,7 +69,7 @@ fun BalancesRoute(
         onSettleUp = onSettleUp,
         onTotals = onTotals,
         onGroupSettings = onGroupSettings,
-        onRetry = viewModel::onRetry,
+        onRefresh = viewModel::onRefresh,
         onPickYouOpen = viewModel::onPickYouOpen,
         onPickYouDismiss = viewModel::onPickYouDismiss,
         onYouChange = viewModel::onYouChange,
@@ -88,7 +90,7 @@ fun BalancesScreen(
     onSettleUp: () -> Unit,
     onTotals: () -> Unit,
     onGroupSettings: () -> Unit,
-    onRetry: () -> Unit,
+    onRefresh: () -> Unit,
     onPickYouOpen: () -> Unit,
     onPickYouDismiss: () -> Unit,
     onYouChange: (Int) -> Unit,
@@ -135,36 +137,39 @@ fun BalancesScreen(
         },
         bottomBar = bottomBar,
     ) { padding ->
-        when {
-            state.isLoading -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
-
-            state.isEmpty -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(R.string.balances_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            if (state.error != null || state.isOffline) {
+                OfflineBanner(error = state.error, onRetry = onRefresh)
             }
+            PullToRefreshBox(
+                isRefreshing = state.isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                when {
+                    state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
 
-            else -> Content(
-                state = state,
-                padding = padding,
-                onSettleUp = onSettleUp,
-                onRetry = onRetry,
-                onPickYouOpen = onPickYouOpen,
-            )
+                    state.isEmpty -> PullableCenter {
+                        Text(
+                            text = stringResource(R.string.balances_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(32.dp),
+                        )
+                    }
+
+                    else -> Content(
+                        state = state,
+                        onSettleUp = onSettleUp,
+                        onPickYouOpen = onPickYouOpen,
+                    )
+                }
+            }
         }
     }
 }
@@ -172,57 +177,47 @@ fun BalancesScreen(
 @Composable
 private fun Content(
     state: BalancesUiState,
-    padding: androidx.compose.foundation.layout.PaddingValues,
     onSettleUp: () -> Unit,
-    onRetry: () -> Unit,
     onPickYouOpen: () -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(padding),
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        if (state.error != null || state.isOffline) {
-            OfflineBanner(error = state.error, onRetry = onRetry)
+        if (state.needsIdentity) {
+            // In place of the position card, which has nothing to say
+            // without an answer.
+            IdentityPrompt(onChoose = onPickYouOpen)
+        } else {
+            YourPosition(state)
         }
-        Column(
-            modifier = Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            if (state.needsIdentity) {
-                // In place of the position card, which has nothing to say
-                // without an answer.
-                IdentityPrompt(onChoose = onPickYouOpen)
-            } else {
-                YourPosition(state)
-            }
 
-            Column {
-                state.rows.forEachIndexed { index, row ->
-                    BalanceLine(row = row, state = state, index = index)
-                }
+        Column {
+            state.rows.forEachIndexed { index, row ->
+                BalanceLine(row = row, state = state, index = index)
             }
+        }
 
-            if (state.canSettle) {
-                Button(
-                    onClick = onSettleUp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(40.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_handshake),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.balances_settle_up),
-                        modifier = Modifier.padding(start = 8.dp),
-                    )
-                }
+        if (state.canSettle) {
+            Button(
+                onClick = onSettleUp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_handshake),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    text = stringResource(R.string.balances_settle_up),
+                    modifier = Modifier.padding(start = 8.dp),
+                )
             }
         }
     }

@@ -246,7 +246,7 @@ class ActivityViewModelTest {
             api.listActivitiesResult = SpliitResult.Success(
                 ActivityPage(listOf(activity("a3", "2026-09-13T09:00:00Z")), false),
             )
-            viewModel.onRetry()
+            viewModel.onRefresh()
             advanceUntilIdle()
 
             assertEquals(

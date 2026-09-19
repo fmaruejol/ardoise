@@ -18,6 +18,7 @@ import io.github.fmaruejol.ardoise.core.model.UserGroupBalance
 import io.github.fmaruejol.ardoise.core.prefs.GroupPreferences
 import io.github.fmaruejol.ardoise.core.result.SpliitError
 import io.github.fmaruejol.ardoise.core.result.SpliitResult
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -45,6 +46,20 @@ class FakeSpliitApi : SpliitApi {
         SpliitResult.Success(ActivityPage(emptyList(), hasMore = false))
     var listCategoriesResult: SpliitResult<List<Category>> = SpliitResult.Success(emptyList())
 
+    /**
+     * Held open so a test can see a state it would otherwise run straight
+     * past: an answer that comes back at once is conflated by the `StateFlow`
+     * before anything can assert on it.
+     */
+    val gates = mutableMapOf<String, CompletableDeferred<Unit>>()
+
+    fun hold(procedure: String): CompletableDeferred<Unit> =
+        CompletableDeferred<Unit>().also { gates[procedure] = it }
+
+    private suspend fun gated(procedure: String) {
+        gates[procedure]?.await()
+    }
+
     /** Every call, in order, as `procedure` plus the arguments worth asserting on. */
     val calls = mutableListOf<Call>()
 
@@ -54,21 +69,25 @@ class FakeSpliitApi : SpliitApi {
 
     override suspend fun getGroup(groupId: String): SpliitResult<Group?> {
         calls += Call("getGroup", listOf(groupId))
+        gated("getGroup")
         return groupResult
     }
 
     override suspend fun getGroupDetails(groupId: String): SpliitResult<GroupDetails> {
         calls += Call("getGroupDetails", listOf(groupId))
+        gated("getGroupDetails")
         return groupDetailsResult
     }
 
     override suspend fun listGroups(groupIds: List<String>): SpliitResult<List<GroupSummary>> {
         calls += Call("listGroups", listOf(groupIds))
+        gated("listGroups")
         return listGroupsResult
     }
 
     override suspend fun createGroup(group: GroupInput): SpliitResult<String> {
         calls += Call("createGroup", listOf(group))
+        gated("createGroup")
         return createGroupResult
     }
 
@@ -78,6 +97,7 @@ class FakeSpliitApi : SpliitApi {
         participantId: String?,
     ): SpliitResult<Unit> {
         calls += Call("updateGroup", listOf(groupId, group, participantId))
+        gated("updateGroup")
         return updateGroupResult
     }
 
@@ -88,11 +108,13 @@ class FakeSpliitApi : SpliitApi {
         filter: String?,
     ): SpliitResult<ExpensePage> {
         calls += Call("listExpenses", listOf(groupId, cursor, limit, filter))
+        gated("listExpenses")
         return listExpensesResult
     }
 
     override suspend fun getExpense(groupId: String, expenseId: String): SpliitResult<Expense> {
         calls += Call("getExpense", listOf(groupId, expenseId))
+        gated("getExpense")
         return getExpenseResult
     }
 
@@ -102,6 +124,7 @@ class FakeSpliitApi : SpliitApi {
         participantId: String?,
     ): SpliitResult<String> {
         calls += Call("createExpense", listOf(groupId, expense, participantId))
+        gated("createExpense")
         return createExpenseResult
     }
 
@@ -112,6 +135,7 @@ class FakeSpliitApi : SpliitApi {
         participantId: String?,
     ): SpliitResult<String> {
         calls += Call("updateExpense", listOf(groupId, expenseId, expense, participantId))
+        gated("updateExpense")
         return updateExpenseResult
     }
 
@@ -121,11 +145,13 @@ class FakeSpliitApi : SpliitApi {
         participantId: String?,
     ): SpliitResult<Unit> {
         calls += Call("deleteExpense", listOf(groupId, expenseId, participantId))
+        gated("deleteExpense")
         return deleteExpenseResult
     }
 
     override suspend fun listBalances(groupId: String): SpliitResult<GroupBalances> {
         calls += Call("listBalances", listOf(groupId))
+        gated("listBalances")
         return listBalancesResult
     }
 
@@ -133,6 +159,7 @@ class FakeSpliitApi : SpliitApi {
         groups: List<Pair<String, String>>,
     ): SpliitResult<List<UserGroupBalance>> {
         calls += Call("balancesForUser", listOf(groups))
+        gated("balancesForUser")
         return balancesForUserResult
     }
 
@@ -142,11 +169,13 @@ class FakeSpliitApi : SpliitApi {
         limit: Int,
     ): SpliitResult<ActivityPage> {
         calls += Call("listActivities", listOf(groupId, cursor, limit))
+        gated("listActivities")
         return listActivitiesResult
     }
 
     override suspend fun listCategories(): SpliitResult<List<Category>> {
         calls += Call("listCategories", emptyList())
+        gated("listCategories")
         return listCategoriesResult
     }
 

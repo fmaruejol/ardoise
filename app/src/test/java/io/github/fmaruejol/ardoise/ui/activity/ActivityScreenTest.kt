@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.github.fmaruejol.ardoise.core.model.ActivityType
 import io.github.fmaruejol.ardoise.core.result.SpliitError
+import io.github.fmaruejol.ardoise.ui.pullDown
 import io.github.fmaruejol.ardoise.ui.theme.ArdoiseTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -26,6 +27,7 @@ class ActivityScreenTest {
     private fun setContent(
         state: ActivityUiState,
         onExpenseClick: (String) -> Unit = {},
+        onRefresh: () -> Unit = {},
     ) {
         compose.setContent {
             ArdoiseTheme {
@@ -34,10 +36,31 @@ class ActivityScreenTest {
                     onBack = {},
                     onExpenseClick = onExpenseClick,
                     onLoadMore = {},
-                    onRetry = {},
+                    onRefresh = onRefresh,
                 )
             }
         }
+    }
+
+    @Test
+    fun `pulling the log down refreshes it`() {
+        var pulled = 0
+        setContent(day(row()), onRefresh = { pulled++ })
+
+        compose.onNodeWithText("Surf lesson", substring = true).pullDown()
+
+        assertEquals(1, pulled)
+    }
+
+    @Test
+    fun `an empty log can be pulled down too`() {
+        var pulled = 0
+        setContent(ActivityUiState(isLoading = false), onRefresh = { pulled++ })
+
+        // A centred Box would swallow the gesture; nothing here scrolls.
+        compose.onNodeWithText("Nothing has happened in this group yet.").pullDown()
+
+        assertEquals(1, pulled)
     }
 
     private fun row(

@@ -196,6 +196,16 @@ for `groups.balances.forUser`, the one read with no rows of its own.
 subscription, so retrying means subscribing again — one screen asking for itself,
 never an announcement.
 
+**Pull to refresh and the banner's button are one action**: both call
+`Retry.again`, and both raise the same indicator. When that indicator comes down
+cannot be read off the emissions: a refresh that changes nothing writes identical rows, so
+`cachedThenFresh` drops the repeat and the answer never arrives. `RefreshScope`
+is the signal, **carried in the coroutine context** so that what it counts is one
+subscription — `refreshAfterExpenseChange` runs with no scope in context and
+moves nothing. It cannot live in `SpliitCache` either: an empty group list, a
+search and `balances.forUser` never reach `cachedThenFresh` and would hang or
+retract early, so `Retry.track` counts an emission as an answer too.
+
 `SpliitApi` is an interface so repositories test against a fake that states its
 answers outright, failures included.
 

@@ -12,6 +12,7 @@ import io.github.fmaruejol.ardoise.data.Connectivity
 import io.github.fmaruejol.ardoise.data.GroupRepository
 import io.github.fmaruejol.ardoise.ui.Retry
 import io.github.fmaruejol.ardoise.ui.collectOffline
+import io.github.fmaruejol.ardoise.ui.collectRefreshing
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,6 +45,7 @@ data class BalancesUiState(
     val pickingYou: Boolean = false,
     /** Read only to raise the offline banner over rows from the cache. */
     val isOffline: Boolean = false,
+    val isRefreshing: Boolean = false,
     val error: SpliitError? = null,
 ) {
     /**
@@ -80,6 +82,7 @@ class BalancesViewModel(
 
     init {
         collectOffline(connectivity, _state) { copy(isOffline = it) }
+        collectRefreshing(retry, _state) { copy(isRefreshing = it) }
     }
 
     init {
@@ -116,7 +119,7 @@ class BalancesViewModel(
         }
     }
 
-    fun onRetry() = retry.again()
+    fun onRefresh() = retry.again()
 
     fun onPickYouOpen() = _state.update { it.copy(pickingYou = true) }
 

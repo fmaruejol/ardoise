@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.github.fmaruejol.ardoise.core.currency.GroupCurrency
 import io.github.fmaruejol.ardoise.core.result.SpliitError
+import io.github.fmaruejol.ardoise.ui.pullDown
 import io.github.fmaruejol.ardoise.ui.theme.ArdoiseTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -27,6 +28,7 @@ class BalancesScreenTest {
         state: BalancesUiState,
         onSettleUp: () -> Unit = {},
         onPickYouOpen: () -> Unit = {},
+        onRefresh: () -> Unit = {},
     ) {
         compose.setContent {
             ArdoiseTheme {
@@ -36,7 +38,7 @@ class BalancesScreenTest {
                     onSettleUp = onSettleUp,
                     onTotals = {},
                     onGroupSettings = {},
-                    onRetry = {},
+                    onRefresh = onRefresh,
                     onPickYouOpen = onPickYouOpen,
                     onPickYouDismiss = {},
                     onYouChange = {},
@@ -57,6 +59,27 @@ class BalancesScreenTest {
         counterparties = 1,
         canSettle = true,
     )
+
+    @Test
+    fun `pulling the balances down refreshes them`() {
+        var pulled = 0
+        setContent(loaded, onRefresh = { pulled++ })
+
+        compose.onNodeWithText("Your position").pullDown()
+
+        assertEquals(1, pulled)
+    }
+
+    @Test
+    fun `empty balances can be pulled down too`() {
+        var pulled = 0
+        setContent(BalancesUiState(isLoading = false), onRefresh = { pulled++ })
+
+        // A centred Box would swallow the gesture; nothing here scrolls.
+        compose.onNodeWithText("Nothing to balance until there is an expense.").pullDown()
+
+        assertEquals(1, pulled)
+    }
 
     @Test
     fun `leads with your own position`() {

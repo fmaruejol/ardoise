@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -37,6 +38,7 @@ import io.github.fmaruejol.ardoise.R
 import io.github.fmaruejol.ardoise.core.model.ActivityType
 import io.github.fmaruejol.ardoise.ui.components.FullDate
 import io.github.fmaruejol.ardoise.ui.components.OfflineBanner
+import io.github.fmaruejol.ardoise.ui.components.PullableCenter
 import io.github.fmaruejol.ardoise.ui.components.TimeOfDay
 import io.github.fmaruejol.ardoise.ui.components.rememberDateFormatter
 import org.koin.androidx.compose.koinViewModel
@@ -61,7 +63,7 @@ fun ActivityRoute(
         onBack = onBack,
         onExpenseClick = onExpenseClick,
         onLoadMore = viewModel::onLoadMore,
-        onRetry = viewModel::onRetry,
+        onRefresh = viewModel::onRefresh,
         modifier = modifier,
         bottomBar = bottomBar,
     )
@@ -78,7 +80,7 @@ fun ActivityScreen(
     onBack: () -> Unit,
     onExpenseClick: (String) -> Unit,
     onLoadMore: () -> Unit,
-    onRetry: () -> Unit,
+    onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
@@ -102,42 +104,38 @@ fun ActivityScreen(
         },
         bottomBar = bottomBar,
     ) { padding ->
-        when {
-            state.isLoading -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
-
-            state.isEmpty -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(R.string.activity_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            if (state.error != null || state.isOffline) {
+                OfflineBanner(error = state.error, onRetry = onRefresh)
             }
-
-            else -> Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+            PullToRefreshBox(
+                isRefreshing = state.isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize(),
             ) {
-                if (state.error != null || state.isOffline) {
-                    OfflineBanner(error = state.error, onRetry = onRetry)
+                when {
+                    state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+
+                    state.isEmpty -> PullableCenter {
+                        Text(
+                            text = stringResource(R.string.activity_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(32.dp),
+                        )
+                    }
+
+                    else -> Log(
+                        state = state,
+                        onExpenseClick = onExpenseClick,
+                        onLoadMore = onLoadMore,
+                    )
                 }
-                Log(
-                    state = state,
-                    onExpenseClick = onExpenseClick,
-                    onLoadMore = onLoadMore,
-                )
             }
         }
     }

@@ -5,6 +5,8 @@ import io.github.fmaruejol.ardoise.core.model.Category
 import io.github.fmaruejol.ardoise.core.model.Participant
 import io.github.fmaruejol.ardoise.core.result.SpliitError
 import io.github.fmaruejol.ardoise.core.result.SpliitResult
+import io.github.fmaruejol.ardoise.data.RefreshScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
@@ -259,12 +261,20 @@ class SpliitCache(
         isCached: (T) -> Boolean = { true },
         refresh: suspend () -> SpliitError?,
     ): Flow<SpliitResult<T>> = flow {
+        // Before the cached value goes out: it arrives at once, and a screen
+        // seeing nothing in flight beside it would read the refresh as over.
+        val scope = currentCoroutineContext()[RefreshScope]
+        scope?.begin()
+
         val existing = local.first()
         val hadCache = isCached(existing)
         if (hadCache) emit(SpliitResult.Success(existing))
 
         val error = refresh()
         if (error != null) emit(SpliitResult.Failure(error))
+        // Not once the rows land: a failure writes nothing, so `tail` may
+        // never speak again.
+        scope?.finished()
 
         val tail = when {
             // The refresh wrote nothing, so the cache still holds what went out.

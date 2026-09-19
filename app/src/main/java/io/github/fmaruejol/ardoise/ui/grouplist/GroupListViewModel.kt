@@ -10,6 +10,7 @@ import io.github.fmaruejol.ardoise.data.Connectivity
 import io.github.fmaruejol.ardoise.data.GroupRepository
 import io.github.fmaruejol.ardoise.ui.Retry
 import io.github.fmaruejol.ardoise.ui.collectOffline
+import io.github.fmaruejol.ardoise.ui.collectRefreshing
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -68,6 +69,7 @@ class GroupListViewModel(
 
     init {
         collectOffline(connectivity, _state) { copy(isOffline = it) }
+        collectRefreshing(retry, _state) { copy(isRefreshing = it) }
     }
 
     init {
@@ -77,14 +79,12 @@ class GroupListViewModel(
                     when (result) {
                         is SpliitResult.Success -> it.copy(
                             isLoading = false,
-                            isRefreshing = false,
                             groups = result.value,
                             error = null,
                         )
 
                         is SpliitResult.Failure -> it.copy(
                             isLoading = false,
-                            isRefreshing = false,
                             error = result.error,
                         )
                     }
@@ -109,10 +109,7 @@ class GroupListViewModel(
         }
     }
 
-    fun onRefresh() {
-        _state.update { it.copy(isRefreshing = true) }
-        retry.again()
-    }
+    fun onRefresh() = retry.again()
 
     // --- searching ---------------------------------------------------------
 

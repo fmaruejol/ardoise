@@ -9,6 +9,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import io.github.fmaruejol.ardoise.core.result.SpliitError
 import io.github.fmaruejol.ardoise.data.groupSummary
+import io.github.fmaruejol.ardoise.ui.pullDown
 import io.github.fmaruejol.ardoise.ui.theme.ArdoiseTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -52,6 +53,29 @@ class GroupListScreenTest {
     }
 
     private val trip = groupSummary("g1", "Trip to Lisbon")
+
+    @Test
+    fun `pulling the list down refreshes it`() {
+        var pulled = 0
+        setContent(
+            GroupListUiState(isLoading = false, groups = listOf(trip)),
+            onRefresh = { pulled++ },
+        )
+
+        compose.onNodeWithText("Trip to Lisbon").pullDown()
+
+        assertEquals(1, pulled)
+    }
+
+    @Test
+    fun `the empty state can be pulled down too`() {
+        var pulled = 0
+        setContent(GroupListUiState(isLoading = false), onRefresh = { pulled++ })
+
+        compose.onNodeWithText("No groups yet").pullDown()
+
+        assertEquals(1, pulled)
+    }
 
     @Test
     fun `teaches both ways in when there are no groups yet`() {

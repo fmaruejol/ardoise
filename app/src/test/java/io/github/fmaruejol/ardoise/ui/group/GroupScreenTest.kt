@@ -18,6 +18,7 @@ import io.github.fmaruejol.ardoise.core.model.Participant
 import io.github.fmaruejol.ardoise.core.model.RecurrenceRule
 import io.github.fmaruejol.ardoise.core.model.SplitMode
 import io.github.fmaruejol.ardoise.data.PendingExpense
+import io.github.fmaruejol.ardoise.ui.pullDown
 import io.github.fmaruejol.ardoise.ui.theme.ArdoiseTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -86,6 +87,7 @@ class GroupScreenTest {
         onGroupSettings: () -> Unit = {},
         onPickYouOpen: () -> Unit = {},
         onPendingClick: (String) -> Unit = {},
+        onRefresh: () -> Unit = {},
     ) {
         compose.setContent {
             ArdoiseTheme {
@@ -106,10 +108,30 @@ class GroupScreenTest {
                     onPayerFilter = {},
                     onDateFilter = {},
                     onLoadMore = {},
-                    onRetry = {},
+                    onRefresh = onRefresh,
                 )
             }
         }
+    }
+
+    @Test
+    fun `pulling the feed down refreshes it`() {
+        var pulled = 0
+        setContent(loaded, onRefresh = { pulled++ })
+
+        compose.onNodeWithText("Dinner at Cervejaria").pullDown()
+
+        assertEquals(1, pulled)
+    }
+
+    @Test
+    fun `an empty feed can be pulled down too`() {
+        var pulled = 0
+        setContent(GroupUiState(isLoading = false), onRefresh = { pulled++ })
+
+        compose.onNodeWithText("No expenses yet").pullDown()
+
+        assertEquals(1, pulled)
     }
 
     @Test
