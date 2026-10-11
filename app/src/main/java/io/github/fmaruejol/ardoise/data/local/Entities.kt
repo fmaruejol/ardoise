@@ -27,6 +27,8 @@ data class GroupEntity(
      * Without it an unfetched group would look like a group with nobody in it.
      */
     val hasParticipants: Boolean,
+    /** Only `groups.get` says; a row from the list keeps what it had. */
+    val deleteAt: Long? = null,
 )
 
 @Entity(

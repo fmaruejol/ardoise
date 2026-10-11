@@ -89,6 +89,7 @@ class GroupScreenTest {
         onPickYouOpen: () -> Unit = {},
         onPendingClick: (String) -> Unit = {},
         onRefresh: () -> Unit = {},
+        onRestore: () -> Unit = {},
     ) {
         compose.setContent {
             ArdoiseTheme {
@@ -110,9 +111,35 @@ class GroupScreenTest {
                     onDateFilter = {},
                     onLoadMore = {},
                     onRefresh = onRefresh,
+                    onRestore = onRestore,
                 )
             }
         }
+    }
+
+    @Test
+    fun `a group scheduled for deletion says when, and can be restored`() {
+        var restored = 0
+        setContent(
+            loaded.copy(deleteAt = java.time.Instant.parse("2026-11-10T12:00:00Z"), canRestore = true),
+            onRestore = { restored++ },
+        )
+
+        compose.onNodeWithText("Group scheduled for deletion").assertIsDisplayed()
+        compose.onNodeWithText("It will be permanently deleted on November 10, 2026. Until then it can be restored.")
+            .assertIsDisplayed()
+        compose.onNodeWithText("Restore group").performClick()
+
+        assertEquals(1, restored)
+    }
+
+    @Test
+    fun `past its date the notice offers no restore`() {
+        setContent(loaded.copy(deleteAt = java.time.Instant.parse("2026-01-01T00:00:00Z"), canRestore = false))
+
+        compose.onNodeWithText("It will be permanently deleted shortly, and can no longer be restored.")
+            .assertIsDisplayed()
+        compose.onNodeWithText("Restore group").assertDoesNotExist()
     }
 
     @Test

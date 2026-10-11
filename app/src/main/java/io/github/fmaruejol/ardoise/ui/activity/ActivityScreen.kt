@@ -240,15 +240,18 @@ private fun ActivityType.icon(): Int = when (this) {
     ActivityType.UPDATE_EXPENSE -> R.drawable.ic_edit
     ActivityType.DELETE_EXPENSE -> R.drawable.ic_delete
     ActivityType.UPDATE_GROUP -> R.drawable.ic_groups
+    ActivityType.SCHEDULE_GROUP_DELETION -> R.drawable.ic_delete
+    ActivityType.RESTORE_GROUP -> R.drawable.ic_history
     ActivityType.UNKNOWN -> R.drawable.ic_history
 }
 
 @Composable
 private fun ActivityType.tint() = when (this) {
-    // Only the two ends of an expense's life are coloured; an edit stays quiet.
+    // The two ends of an expense's life are coloured, and a group about to
+    // go; an edit stays quiet.
     ActivityType.CREATE_EXPENSE -> MaterialTheme.colorScheme.primary
 
-    ActivityType.DELETE_EXPENSE -> MaterialTheme.colorScheme.error
+    ActivityType.DELETE_EXPENSE, ActivityType.SCHEDULE_GROUP_DELETION -> MaterialTheme.colorScheme.error
 
     else -> MaterialTheme.colorScheme.onSurfaceVariant
 }
@@ -286,6 +289,18 @@ private fun ActivityRow.sentence(): AnnotatedString {
             stringResource(R.string.activity_group_by_you)
         } else {
             stringResource(R.string.activity_group, subject)
+        }
+
+        ActivityType.SCHEDULE_GROUP_DELETION -> if (byYou) {
+            stringResource(R.string.activity_deletion_scheduled_by_you)
+        } else {
+            stringResource(R.string.activity_deletion_scheduled, subject)
+        }
+
+        ActivityType.RESTORE_GROUP -> if (byYou) {
+            stringResource(R.string.activity_restored_by_you)
+        } else {
+            stringResource(R.string.activity_restored, subject)
         }
 
         ActivityType.UNKNOWN -> stringResource(R.string.activity_unknown, subject)

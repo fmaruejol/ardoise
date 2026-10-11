@@ -20,6 +20,7 @@ import io.github.fmaruejol.ardoise.api.dto.ListExpensesInput
 import io.github.fmaruejol.ardoise.api.dto.ListExpensesResponse
 import io.github.fmaruejol.ardoise.api.dto.ListGroupsResponse
 import io.github.fmaruejol.ardoise.api.dto.MutateExpenseResponse
+import io.github.fmaruejol.ardoise.api.dto.RestoreGroupInput
 import io.github.fmaruejol.ardoise.api.dto.StatsGetResponse
 import io.github.fmaruejol.ardoise.api.dto.StatsOverviewResponse
 import io.github.fmaruejol.ardoise.api.dto.UpdateExpenseInput
@@ -88,6 +89,13 @@ class SpliitApiClient(private val client: TrpcClient) : SpliitApi {
             deserializer = CreateGroupResponse.serializer(),
             input = encode(CreateGroupInput.serializer(), CreateGroupInput(group.toDto())),
         ).mapCatching { it.groupId }
+
+    override suspend fun restoreGroup(groupId: String, participantId: String?): SpliitResult<Unit> =
+        client.mutation(
+            procedure = Procedures.GROUPS_RESTORE,
+            deserializer = Unit.serializer(),
+            input = encode(RestoreGroupInput.serializer(), RestoreGroupInput(groupId, participantId)),
+        )
 
     override suspend fun updateGroup(
         groupId: String,
@@ -334,6 +342,7 @@ object Procedures {
     const val GROUPS_LIST = "groups.list"
     const val GROUPS_CREATE = "groups.create"
     const val GROUPS_UPDATE = "groups.update"
+    const val GROUPS_RESTORE = "groups.restore"
 
     const val EXPENSES_LIST = "groups.expenses.list"
     const val EXPENSES_GET = "groups.expenses.get"

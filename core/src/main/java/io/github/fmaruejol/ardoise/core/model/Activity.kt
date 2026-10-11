@@ -7,6 +7,8 @@ enum class ActivityType {
     CREATE_EXPENSE,
     UPDATE_EXPENSE,
     DELETE_EXPENSE,
+    SCHEDULE_GROUP_DELETION,
+    RESTORE_GROUP,
     UNKNOWN,
     ;
 

@@ -42,6 +42,7 @@ internal fun Group.toEntity(participantCount: Int = participants.size) = GroupEn
     createdAt = createdAt.toEpochMilli(),
     participantCount = participantCount,
     hasParticipants = true,
+    deleteAt = deleteAt?.toEpochMilli(),
 )
 
 internal fun Group.participantEntities(): List<ParticipantEntity> =
@@ -65,6 +66,7 @@ internal fun GroupSummary.toEntity(existing: GroupEntity?) = GroupEntity(
     // A row built from the list endpoint must not claim the cached
     // participants are gone.
     hasParticipants = existing?.hasParticipants == true,
+    deleteAt = existing?.deleteAt,
 )
 
 internal fun GroupEntity.toSummary() = GroupSummary(
@@ -85,6 +87,7 @@ internal fun GroupEntity.toGroup(participants: List<ParticipantEntity>) = Group(
     currencyCode = currencyCode,
     createdAt = Instant.ofEpochMilli(createdAt),
     participants = participants.map { Participant(it.id, it.name) },
+    deleteAt = deleteAt?.let(Instant::ofEpochMilli),
 )
 
 // --- expenses --------------------------------------------------------------

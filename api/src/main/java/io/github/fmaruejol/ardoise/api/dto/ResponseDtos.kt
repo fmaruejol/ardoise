@@ -37,6 +37,7 @@ internal data class GroupDto(
     val currencyCode: String? = null,
     @Serializable(with = InstantSerializer::class) val createdAt: Instant,
     val participants: List<ParticipantDto> = emptyList(),
+    @Serializable(with = InstantSerializer::class) val deleteAt: Instant? = null,
 )
 
 @Serializable

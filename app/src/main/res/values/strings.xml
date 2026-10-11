@@ -242,10 +242,21 @@
     <string name="activity_deleted_by_you">You deleted %1$s</string>
     <string name="activity_group">%1$s changed the group</string>
     <string name="activity_group_by_you">You changed the group</string>
+    <string name="activity_deletion_scheduled">%1$s scheduled the group for deletion</string>
+    <string name="activity_deletion_scheduled_by_you">You scheduled the group for deletion</string>
+    <string name="activity_restored">%1$s restored the group</string>
+    <string name="activity_restored_by_you">You restored the group</string>
     <string name="activity_unknown">%1$s did something this app does not know about</string>
     <string name="activity_someone">Someone</string>
     <string name="activity_untitled">an expense</string>
     <string name="activity_load_more">Show older activity</string>
+
+    <!-- A group scheduled for deletion, over its feed. -->
+    <string name="group_deletion_title">Group scheduled for deletion</string>
+    <string name="group_deletion_body">It will be permanently deleted on %1$s. Until then it can be restored.</string>
+    <string name="group_deletion_past">It will be permanently deleted shortly, and can no longer be restored.</string>
+    <string name="group_restore">Restore group</string>
+    <string name="group_restore_failed">Could not restore the group. It may already have been restored, or its deletion date has passed.</string>
 
     <!-- No connection. -->
     <string name="offline_banner">Offline. Showing the last synced copy</string>

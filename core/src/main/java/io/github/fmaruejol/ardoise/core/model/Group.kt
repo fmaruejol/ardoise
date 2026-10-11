@@ -16,6 +16,11 @@ data class Group(
     val currencyCode: String?,
     val createdAt: Instant,
     val participants: List<Participant>,
+    /**
+     * When the server purges the group, if someone has asked for it to be
+     * deleted. Until then it is restorable, and every client says so.
+     */
+    val deleteAt: Instant? = null,
 ) {
     fun participant(id: String?): Participant? =
         if (id == null) null else participants.firstOrNull { it.id == id }

@@ -114,6 +114,19 @@ class ActivityScreenTest {
     }
 
     @Test
+    fun `says who scheduled the group's deletion, and who took it back`() {
+        setContent(
+            day(
+                row(id = "a1", type = ActivityType.SCHEDULE_GROUP_DELETION, what = null, expenseId = null),
+                row(id = "a2", type = ActivityType.RESTORE_GROUP, byYou = true, what = null, expenseId = null),
+            ),
+        )
+
+        compose.onNodeWithText("Ben scheduled the group for deletion").assertIsDisplayed()
+        compose.onNodeWithText("You restored the group").assertIsDisplayed()
+    }
+
+    @Test
     fun `says you rather than your own name`() {
         setContent(day(row(byYou = true)))
 

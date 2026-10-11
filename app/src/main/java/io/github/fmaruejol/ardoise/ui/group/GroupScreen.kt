@@ -70,6 +70,7 @@ fun GroupRoute(
         onDateFilter = viewModel::onDateFilter,
         onLoadMore = viewModel::onLoadMore,
         onRefresh = viewModel::onRefresh,
+        onRestore = viewModel::onRestore,
         modifier = modifier,
         bottomBar = bottomBar,
     )
@@ -99,6 +100,7 @@ fun GroupScreen(
     onDateFilter: (DateFilter) -> Unit,
     onLoadMore: () -> Unit,
     onRefresh: () -> Unit,
+    onRestore: () -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
@@ -177,6 +179,15 @@ fun GroupScreen(
         ) {
             // Above the feed rather than in it: it is about all the rows
             // below, and a row of its own would scroll away from them.
+            state.deleteAt?.let { deleteAt ->
+                DeletionNotice(
+                    deleteAt = deleteAt,
+                    canRestore = state.canRestore,
+                    isRestoring = state.isRestoring,
+                    restoreFailed = state.restoreFailed,
+                    onRestore = onRestore,
+                )
+            }
             if (state.error != null || state.isOffline) {
                 OfflineBanner(error = state.error, onRetry = onRefresh)
             }

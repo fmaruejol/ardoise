@@ -14,6 +14,9 @@ internal data class GroupIdInput(val groupId: String)
 internal data class GroupIdsInput(val groupIds: List<String>)
 
 @Serializable
+internal data class RestoreGroupInput(val groupId: String, val participantId: String? = null)
+
+@Serializable
 internal data class ExpenseIdInput(val groupId: String, val expenseId: String)
 
 @Serializable

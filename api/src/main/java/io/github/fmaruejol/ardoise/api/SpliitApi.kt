@@ -40,6 +40,13 @@ interface SpliitApi {
     /** Returns the new group's id. */
     suspend fun createGroup(group: GroupInput): SpliitResult<String>
 
+    /**
+     * Cancels a scheduled deletion. Fails once the date has passed, when the
+     * group may already be going. Always available, even on an instance with
+     * deletion switched off, so a group scheduled before then can be saved.
+     */
+    suspend fun restoreGroup(groupId: String, participantId: String? = null): SpliitResult<Unit>
+
     /** [participantId] only attributes the change in the activity log. */
     suspend fun updateGroup(
         groupId: String,

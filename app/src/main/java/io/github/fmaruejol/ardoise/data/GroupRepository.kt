@@ -109,6 +109,16 @@ class GroupRepository(
         return result
     }
 
+    /** Cancels the group's scheduled deletion. The log records it, so it is fetched too. */
+    suspend fun restore(groupId: String): SpliitResult<Unit> {
+        val result = api.restoreGroup(groupId, preferences.activeParticipantId(groupId).first())
+        if (result is SpliitResult.Success) {
+            cache.refreshGroup(groupId)
+            cache.refreshActivities(groupId, SpliitCache.ACTIVITY_LIMIT)
+        }
+        return result
+    }
+
     /**
      * Looks a group up once, without observing it: an id that does not resolve
      * is absent from [groups], so a pasted link has to be checked first. Goes

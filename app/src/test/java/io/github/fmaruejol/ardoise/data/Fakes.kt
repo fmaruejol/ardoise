@@ -34,6 +34,7 @@ class FakeSpliitApi : SpliitApi {
     var listGroupsResult: SpliitResult<List<GroupSummary>> = SpliitResult.Success(emptyList())
     var createGroupResult: SpliitResult<String> = SpliitResult.Success("new-group")
     var updateGroupResult: SpliitResult<Unit> = SpliitResult.Success(Unit)
+    var restoreGroupResult: SpliitResult<Unit> = SpliitResult.Success(Unit)
     var listExpensesResult: SpliitResult<ExpensePage> =
         SpliitResult.Success(ExpensePage(emptyList(), hasMore = false))
     var getExpenseResult: SpliitResult<Expense> = notImplemented()
@@ -92,6 +93,12 @@ class FakeSpliitApi : SpliitApi {
         calls += Call("createGroup", listOf(group))
         gated("createGroup")
         return createGroupResult
+    }
+
+    override suspend fun restoreGroup(groupId: String, participantId: String?): SpliitResult<Unit> {
+        calls += Call("restoreGroup", listOf(groupId, participantId))
+        gated("restoreGroup")
+        return restoreGroupResult
     }
 
     override suspend fun updateGroup(

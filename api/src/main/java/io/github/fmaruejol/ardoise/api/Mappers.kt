@@ -67,6 +67,7 @@ internal fun GroupDto.toDomain() = Group(
     currencyCode = currencyCode,
     createdAt = createdAt,
     participants = participants.map { it.toDomain() },
+    deleteAt = deleteAt,
 )
 
 internal fun GroupSummaryDto.toDomain() = GroupSummary(

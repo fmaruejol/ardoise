@@ -244,10 +244,21 @@
     <string name="activity_deleted_by_you">Vous avez supprimé %1$s</string>
     <string name="activity_group">%1$s a modifié le groupe</string>
     <string name="activity_group_by_you">Vous avez modifié le groupe</string>
+    <string name="activity_deletion_scheduled">%1$s a programmé la suppression du groupe</string>
+    <string name="activity_deletion_scheduled_by_you">Vous avez programmé la suppression du groupe</string>
+    <string name="activity_restored">%1$s a restauré le groupe</string>
+    <string name="activity_restored_by_you">Vous avez restauré le groupe</string>
     <string name="activity_unknown">%1$s a fait quelque chose que cette app ne connaît pas</string>
     <string name="activity_someone">Quelqu’un</string>
     <string name="activity_untitled">une dépense</string>
     <string name="activity_load_more">Afficher l’activité plus ancienne</string>
+
+    <!-- Un groupe dont la suppression est programmée, au-dessus de ses dépenses. -->
+    <string name="group_deletion_title">Suppression du groupe programmée</string>
+    <string name="group_deletion_body">Il sera définitivement supprimé le %1$s. D’ici là, il peut être restauré.</string>
+    <string name="group_deletion_past">Il sera définitivement supprimé sous peu et ne peut plus être restauré.</string>
+    <string name="group_restore">Restaurer le groupe</string>
+    <string name="group_restore_failed">Impossible de restaurer le groupe. Il a peut-être déjà été restauré, ou sa date de suppression est passée.</string>
 
     <!-- Pas de connexion. -->
     <string name="offline_banner">Hors ligne. Dernière copie synchronisée</string>

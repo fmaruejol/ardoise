@@ -76,6 +76,56 @@ class GroupViewModelTest {
     }
 
     @Test
+    fun `a group scheduled for deletion is restorable until its date`() = runTest(dispatcher) {
+        val deleteAt = java.time.Instant.now().plus(java.time.Duration.ofDays(30))
+        api.groupResult = SpliitResult.Success(group("g1", listOf(ana, ben)).copy(deleteAt = deleteAt))
+        preferences.setActiveParticipantId("g1", ben.id)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        assertEquals(deleteAt.toEpochMilli(), viewModel.state.value.deleteAt?.toEpochMilli())
+        assertTrue(viewModel.state.value.canRestore)
+
+        api.groupResult = SpliitResult.Success(group("g1", listOf(ana, ben)))
+        viewModel.onRestore()
+        advanceUntilIdle()
+
+        // Attributed to whoever this device is, then the group is read again.
+        assertEquals(listOf("g1", ben.id), api.callsTo("restoreGroup").single().arguments)
+        assertEquals(null, viewModel.state.value.deleteAt)
+        assertFalse(viewModel.state.value.restoreFailed)
+    }
+
+    @Test
+    fun `a group past its deletion date cannot be restored`() = runTest(dispatcher) {
+        api.groupResult = SpliitResult.Success(
+            group("g1", listOf(ana, ben)).copy(deleteAt = java.time.Instant.parse("2026-01-01T00:00:00Z")),
+        )
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.canRestore)
+    }
+
+    @Test
+    fun `a refused restore says so`() = runTest(dispatcher) {
+        api.groupResult = SpliitResult.Success(
+            group("g1", listOf(ana, ben)).copy(deleteAt = java.time.Instant.now().plusSeconds(3600)),
+        )
+        api.restoreGroupResult = SpliitResult.Failure(
+            io.github.fmaruejol.ardoise.core.result.SpliitError.Procedure("INTERNAL_SERVER_ERROR", "too late"),
+        )
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onRestore()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value.restoreFailed)
+        assertFalse(viewModel.state.value.isRestoring)
+    }
+
+    @Test
     fun `groups the feed by day, newest day first`() = runTest(dispatcher) {
         list(
             expense("e1", "Surf", 14_000, "2026-09-12"),

@@ -65,11 +65,11 @@ data model has a REST route.
   it**: the server rebuilds real `Date`s from the annotations before validating.
 
 `api.Procedures` is the only place paths are written. Mapped:
-`groups.{get,getDetails,list,create,update}`,
+`groups.{get,getDetails,list,create,update,restore}`,
 `groups.expenses.{list,get,create,update,delete}`,
 `groups.balances.{list,forUser}`, `groups.activities.list`,
 `groups.stats.{overview,get}`, `categories.list`.
-**Not mapped:** `groups.stats.{categoryExpenses,monthExpenses}`.
+**Not mapped:** `groups.stats.{categoryExpenses,monthExpenses}`, and `groups.delete`.
 
 `categories.list` needs neither input nor group, which is what makes it the probe
 for "is this address a Spliit server".
@@ -642,6 +642,12 @@ languages).
 `groups.update` takes the **whole** group, so `GroupSettingsViewModel` carries the
 currency symbol and ISO code through untouched. Dropping them silently rewrites
 the scale of every amount in the group.
+
+**A group scheduled for deletion says so over its feed** (`Group.deleteAt`, from
+`groups.get`), with a Restore button until the date and none after it: somebody
+may have asked for it from another client, and everyone holding the link should
+see it go before it does. `groups.restore` is available even where deletion is
+switched off. Deleting is not offered here.
 
 A participant who is on an expense cannot be removed. The server refuses, and so
 does this, with the reason rather than a relayed `BAD_REQUEST`.

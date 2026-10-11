@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 
 /** The Date chip's presets: the feed answers "what have we spent lately". */
@@ -111,6 +112,12 @@ data class GroupUiState(
     val isOffline: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: SpliitError? = null,
+    /** When the server purges the group, if someone scheduled its deletion. */
+    val deleteAt: Instant? = null,
+    /** Past [deleteAt] the group may already be going, and restoring is refused. */
+    val canRestore: Boolean = false,
+    val isRestoring: Boolean = false,
+    val restoreFailed: Boolean = false,
 ) {
     /**
      * True once the group is loaded and nobody has said who they are. Not
@@ -262,6 +269,15 @@ class GroupViewModel(
         }
     }
 
+    fun onRestore() {
+        if (_state.value.isRestoring) return
+        _state.update { it.copy(isRestoring = true, restoreFailed = false) }
+        viewModelScope.launch {
+            val result = groups.restore(groupId)
+            _state.update { it.copy(isRestoring = false, restoreFailed = result is SpliitResult.Failure) }
+        }
+    }
+
     fun onPickYouOpen() = _state.update { it.copy(pickingYou = true) }
 
     fun onPickYouDismiss() = _state.update { it.copy(pickingYou = false) }
@@ -310,6 +326,8 @@ class GroupViewModel(
         groupName = group.name,
         currency = GroupCurrency.of(group.currencyCode, group.currencySymbol),
         participants = group.participants,
+        deleteAt = group.deleteAt,
+        canRestore = group.deleteAt?.isAfter(Instant.now()) == true,
     )
 
     private fun GroupUiState.withExpenses(all: List<ExpenseSummary>): GroupUiState {

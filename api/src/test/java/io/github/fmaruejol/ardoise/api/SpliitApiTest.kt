@@ -348,6 +348,30 @@ class SpliitApiTest {
     }
 
     @Test
+    fun `a group scheduled for deletion says when, and restoring it is a mutation`() = runTest {
+        server.enqueue(
+            ok(
+                GROUP_RESPONSE.replace(
+                    "\"participants\"",
+                    "\"deleteAt\":\"2026-11-10T12:00:00.000Z\",\"participants\"",
+                ),
+            ),
+        )
+        server.enqueue(ok("""{"result":{"data":{}}}"""))
+
+        val group = (api.getGroup("g1") as SpliitResult.Success).value!!
+        val restored = api.restoreGroup("g1", participantId = "p1")
+
+        assertEquals(Instant.parse("2026-11-10T12:00:00Z"), group.deleteAt)
+        assertEquals(SpliitResult.Success(Unit), restored)
+        server.takeRequest()
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/api/trpc/groups.restore", request.requestUrl?.encodedPath)
+        assertEquals("""{"json":{"groupId":"g1","participantId":"p1"}}""", request.body.readUtf8())
+    }
+
+    @Test
     fun `an activity says whether its expense still exists`() = runTest {
         server.enqueue(
             ok(
