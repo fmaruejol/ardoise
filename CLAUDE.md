@@ -154,8 +154,10 @@ currencies can have different scales.
 [Frankfurter](https://frankfurter.dev), which upstream's `useCurrencyRate` also
 queries, so both clients fill the field from one source. It asks for the rate **on
 the expense's date**, is the only host the app talks to that is not the chosen
-instance, and is told nothing but a date and two codes. Asked once when a foreign
-currency is picked, then only on request.
+instance, and is told nothing but a date and two codes. Asked when a foreign
+currency is picked, and again when the date changes while the rate is still the one
+looked up, as upstream does. A rate somebody typed, or one read back from the
+server, is never replaced unasked.
 
 On the form **`amount` is the group's number** (`enteredAmount` is what was
 typed), so split sums and the recurrence preview need no idea a conversion

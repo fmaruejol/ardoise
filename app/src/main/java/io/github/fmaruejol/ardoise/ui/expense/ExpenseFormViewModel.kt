@@ -29,6 +29,7 @@ import io.github.fmaruejol.ardoise.data.CategoryRepository
 import io.github.fmaruejol.ardoise.data.Created
 import io.github.fmaruejol.ardoise.data.ExpenseRepository
 import io.github.fmaruejol.ardoise.data.GroupRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -112,6 +113,11 @@ data class ExpenseFormUiState(
     val fetchingRate: Boolean = false,
     /** Set when a look-up came back with nothing; cleared by typing. */
     val rateUnavailable: Boolean = false,
+    /**
+     * The rate was filled in unasked, so it is the day's and follows the date.
+     * One typed in, or read back from the server, is somebody's and stays.
+     */
+    val rateLookedUp: Boolean = false,
     /**
      * A converted expense's group amount as the server has it, kept until the
      * amount, its currency or the rate is edited. It is not always original ×
@@ -260,6 +266,8 @@ class ExpenseFormViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(ExpenseFormUiState(isNew = expenseId == null))
     val state: StateFlow<ExpenseFormUiState> = _state.asStateFlow()
+
+    private var rateLookUp: Job? = null
 
     private val restored: ExpenseFormDraft? = savedState[DRAFT]
 
@@ -539,6 +547,7 @@ class ExpenseFormViewModel(
             it.copy(
                 conversionRateText = it.rateDraft,
                 storedAmount = if (it.rateDraft == it.conversionRateText) it.storedAmount else null,
+                rateLookedUp = it.rateLookedUp && it.rateDraft == it.conversionRateText,
                 editingRate = false,
                 rateUnavailable = false,
                 errors = it.errors - ExpenseFormError.Rate,
@@ -553,10 +562,12 @@ class ExpenseFormViewModel(
         val current = _state.value
         val base = current.entryCurrency.code ?: return
         val target = current.currency.code ?: return
-        if (current.fetchingRate) return
 
+        // A newer question replaces one still out, or the old date's answer
+        // could land after the new one.
+        rateLookUp?.cancel()
         _state.update { it.copy(fetchingRate = true, rateUnavailable = false) }
-        viewModelScope.launch {
+        rateLookUp = viewModelScope.launch {
             val rate = rates.rate(current.date, base = base, target = target)
             _state.update { state ->
                 // The answer is for the currencies chosen when it was asked.
@@ -574,6 +585,7 @@ class ExpenseFormViewModel(
                         else -> text
                     },
                     storedAmount = state.storedAmount.takeIf { text == null || intoDraft },
+                    rateLookedUp = if (text == null || intoDraft) state.rateLookedUp else true,
                     errors = if (text == null) state.errors else state.errors - ExpenseFormError.Rate,
                 )
             }
@@ -606,7 +618,11 @@ class ExpenseFormViewModel(
 
     fun onDatePickerDismiss() = _state.update { it.copy(pickingDate = false) }
 
-    fun onDateChange(date: LocalDate) = _state.update { it.copy(date = date, pickingDate = false) }
+    fun onDateChange(date: LocalDate) {
+        val before = _state.value
+        _state.update { it.copy(date = date, pickingDate = false) }
+        if (date != before.date && before.isConverted && before.rateLookedUp) lookUpRate()
+    }
 
     fun onPayerPickerOpen() = _state.update { it.copy(pickingPayer = true) }
 

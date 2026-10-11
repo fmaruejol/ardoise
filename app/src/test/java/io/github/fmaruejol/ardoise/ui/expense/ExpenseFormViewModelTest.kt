@@ -39,6 +39,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.util.Locale
@@ -1298,6 +1299,52 @@ class ExpenseFormViewModelTest {
             listOf(Triple(LocalDate.parse("2026-09-11"), "BRL", "EUR")),
             rates.asked,
         )
+    }
+
+    @Test
+    fun `a rate filled in unasked follows the date`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onEntryCurrencyChange("BRL")
+        advanceUntilIdle()
+
+        rates.rate = BigDecimal("0.16")
+        viewModel.onDateChange(LocalDate.parse("2026-09-01"))
+        advanceUntilIdle()
+
+        assertEquals(LocalDate.parse("2026-09-01"), rates.asked.last().first)
+        assertEquals(BigDecimal("0.16"), viewModel.state.value.conversionRate)
+    }
+
+    @Test
+    fun `a rate somebody typed stays when the date changes`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onEntryCurrencyChange("BRL")
+        advanceUntilIdle()
+        viewModel.onRateOpen()
+        viewModel.onRateDraftChange("0.2")
+        viewModel.onRateSave()
+
+        viewModel.onDateChange(LocalDate.parse("2026-09-01"))
+        advanceUntilIdle()
+
+        assertEquals(1, rates.asked.size)
+        assertEquals(BigDecimal("0.2"), viewModel.state.value.conversionRate)
+    }
+
+    @Test
+    fun `a stored expense's rate stays when its date changes`() = runTest(dispatcher) {
+        api.getExpenseResult = SpliitResult.Success(
+            existing().copy(amount = 892, originalAmount = 1000, originalCurrency = "USD", conversionRate = "0.89238"),
+        )
+        val viewModel = viewModel("e1")
+        advanceUntilIdle()
+
+        viewModel.onDateChange(LocalDate.parse("2026-09-01"))
+        advanceUntilIdle()
+
+        assertTrue(rates.asked.isEmpty())
     }
 
     @Test
