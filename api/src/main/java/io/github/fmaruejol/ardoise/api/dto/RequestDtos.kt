@@ -98,6 +98,7 @@ internal data class CreateExpenseInput(
     val groupId: String,
     val expenseFormValues: ExpenseFormValuesDto,
     val participantId: String? = null,
+    val expenseId: String? = null,
 )
 
 @Serializable

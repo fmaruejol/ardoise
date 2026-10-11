@@ -228,6 +228,68 @@ class ExpenseRepositoryTest {
         documents = emptyList(),
     )
 
+    private fun sentIds(): List<String> = api.callsTo("createExpense").map { it.arguments[3] as String }
+
+    @Test
+    fun `every expense is created with an id of its own, in upstream's format`() =
+        runTest(dispatcher) {
+            repository.create("g1", expenseInput)
+            repository.create("g1", expenseInput)
+
+            val ids = sentIds()
+            assertTrue(ids.all { it.matches(Regex("[A-Za-z0-9_-]{21}")) })
+            assertEquals(2, ids.toSet().size)
+        }
+
+    @Test
+    fun `a save that could not reach the server is queued under the id it was sent with`() =
+        runTest(dispatcher) {
+            api.createExpenseResult = SpliitResult.Failure(SpliitError.Network(IOException("offline")))
+
+            val pendingId = (repository.create("g1", expenseInput) as SpliitResult.Success)
+                .value.let { it as Created.Queued }.pendingId
+            advanceUntilIdle()
+
+            assertEquals(sentIds().single(), repository.pendingExpense(pendingId)?.expenseId)
+        }
+
+    @Test
+    fun `editing a queued expense whose send landed updates it rather than adding one`() =
+        runTest(dispatcher) {
+            api.createExpenseResult = SpliitResult.Failure(SpliitError.Network(IOException("offline")))
+            val pendingId = (repository.create("g1", expenseInput) as SpliitResult.Success)
+                .value.let { it as Created.Queued }.pendingId
+            val expenseId = sentIds().single()
+            advanceUntilIdle()
+
+            api.getExpenseResult = SpliitResult.Success(fullExpense(expenseId))
+            api.updateExpenseResult = SpliitResult.Success(expenseId)
+            val result = repository.replaceQueued(pendingId, "g1", expenseInput.copy(title = "Dinner out"))
+            advanceUntilIdle()
+
+            assertEquals(SpliitResult.Success(Created.Sent(expenseId)), result)
+            assertEquals(1, api.callsTo("createExpense").size)
+            assertEquals("Dinner out", (api.callsTo("updateExpense").single().arguments[2] as ExpenseInput).title)
+            assertEquals(null, repository.pendingExpense(pendingId))
+        }
+
+    @Test
+    fun `editing a queued expense that never landed sends it under the same id`() =
+        runTest(dispatcher) {
+            api.createExpenseResult = SpliitResult.Failure(SpliitError.Network(IOException("offline")))
+            val pendingId = (repository.create("g1", expenseInput) as SpliitResult.Success)
+                .value.let { it as Created.Queued }.pendingId
+            advanceUntilIdle()
+
+            api.getExpenseResult = SpliitResult.Failure(SpliitError.NotFound)
+            api.createExpenseResult = SpliitResult.Success("e1")
+            repository.replaceQueued(pendingId, "g1", expenseInput)
+            advanceUntilIdle()
+
+            assertEquals(1, sentIds().toSet().size)
+            assertEquals(2, sentIds().size)
+        }
+
     private fun SpliitResult<ExpensePage>.expenseIds(): List<String> =
         (this as SpliitResult.Success).value.expenses.map { it.id }
 

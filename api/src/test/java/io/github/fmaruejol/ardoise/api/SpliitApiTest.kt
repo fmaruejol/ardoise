@@ -101,6 +101,7 @@ class SpliitApiTest {
 
         api.createExpense(
             groupId = "g1",
+            expenseId = "V1StGXR8_Z5jdHi6B-myT",
             expense = ExpenseInput(
                 title = "Dinner",
                 amount = 4_250,

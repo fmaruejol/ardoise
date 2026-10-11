@@ -1,6 +1,7 @@
 package io.github.fmaruejol.ardoise.data.local.outbox
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Embedded
@@ -25,8 +26,14 @@ import kotlinx.coroutines.flow.Flow
  */
 @Entity(tableName = "pending_expenses", indices = [Index("groupId")])
 data class PendingExpenseEntity(
-    /** Local, and never sent: the server assigns the real id on create. */
+    /** Local, and never sent. The route a queued card opens takes it. */
     @PrimaryKey val id: String,
+    /**
+     * The id it is created with, minted before its first send and kept
+     * through every retry. Null for an expense queued by a build that sent
+     * none; it is given one before its next send.
+     */
+    val expenseId: String? = null,
     val groupId: String,
     val title: String,
     val amount: Long,
@@ -97,6 +104,9 @@ interface OutboxDao {
     @Query("UPDATE pending_expenses SET attempts = :attempts, lastError = :error WHERE id = :id")
     suspend fun recordAttempt(id: String, attempts: Int, error: String?)
 
+    @Query("UPDATE pending_expenses SET expenseId = :expenseId WHERE id = :id")
+    suspend fun assignExpenseId(id: String, expenseId: String)
+
     @Query("DELETE FROM pending_expense_paid_for WHERE pendingId = :id")
     suspend fun deletePaidFor(id: String)
 
@@ -147,8 +157,9 @@ interface OutboxDao {
  */
 @Database(
     entities = [PendingExpenseEntity::class, PendingPaidForEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 abstract class OutboxDatabase : RoomDatabase() {
     abstract fun outbox(): OutboxDao

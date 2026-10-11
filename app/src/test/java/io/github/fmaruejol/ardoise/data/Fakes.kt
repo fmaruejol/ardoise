@@ -124,9 +124,10 @@ class FakeSpliitApi : SpliitApi {
     override suspend fun createExpense(
         groupId: String,
         expense: ExpenseInput,
+        expenseId: String,
         participantId: String?,
     ): SpliitResult<String> {
-        calls += Call("createExpense", listOf(groupId, expense, participantId))
+        calls += Call("createExpense", listOf(groupId, expense, participantId, expenseId))
         gated("createExpense")
         return createExpenseResult
     }

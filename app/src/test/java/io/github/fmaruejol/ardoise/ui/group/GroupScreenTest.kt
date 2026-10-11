@@ -67,6 +67,7 @@ class GroupScreenTest {
     private val queued = PendingExpense(
         id = "q1",
         groupId = "g1",
+        expenseId = null,
         input = ExpenseInput(
             title = "Taxi to airport",
             amount = 2200,

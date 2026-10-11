@@ -142,6 +142,7 @@ class SpliitApiClient(private val client: TrpcClient) : SpliitApi {
     override suspend fun createExpense(
         groupId: String,
         expense: ExpenseInput,
+        expenseId: String,
         participantId: String?,
     ): SpliitResult<String> =
         client.mutation(
@@ -149,7 +150,7 @@ class SpliitApiClient(private val client: TrpcClient) : SpliitApi {
             deserializer = MutateExpenseResponse.serializer(),
             input = encode(
                 CreateExpenseInput.serializer(),
-                CreateExpenseInput(groupId, expense.toDto(), participantId),
+                CreateExpenseInput(groupId, expense.toDto(), participantId, expenseId),
             ),
         ).mapCatching { it.expenseId }
 

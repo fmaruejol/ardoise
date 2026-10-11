@@ -1,5 +1,6 @@
 package io.github.fmaruejol.ardoise.data
 
+import io.github.fmaruejol.ardoise.api.ExpenseIds
 import io.github.fmaruejol.ardoise.api.ExpenseInput
 import io.github.fmaruejol.ardoise.api.SpliitApi
 import io.github.fmaruejol.ardoise.core.model.PaidFor
@@ -26,6 +27,8 @@ import java.util.UUID
 data class PendingExpense(
     val id: String,
     val groupId: String,
+    /** See `PendingExpenseEntity.expenseId`. */
+    val expenseId: String?,
     val input: ExpenseInput,
     val queuedAt: Instant,
     /** Zero until it has been sent at least once. */
@@ -39,10 +42,13 @@ data class PendingExpense(
  *
  * The queue is **visible and the user drives it**: a waiting expense shows on
  * the feed, can be edited and can be thrown away. That is what makes retrying
- * safe. `groups.expenses.create` has no idempotency key, so a send whose
- * answer was lost cannot be told from one that never arrived, and nothing
- * retries silently where a duplicate would go unnoticed. [alreadySent]
- * narrows that window; a client-supplied expense id would remove the need.
+ * safe. A send whose answer was lost looks the same as one that never
+ * arrived, and nothing retries silently where a duplicate would go unnoticed.
+ *
+ * **Every expense is sent with the id it was minted with**, and a send first
+ * asks whether that id already exists, which settles it on Spliit 1.26 and
+ * later. An older instance ignores the id, so [alreadySent] still guesses
+ * there.
  */
 class ExpenseOutbox(
     private val api: SpliitApi,
@@ -62,9 +68,13 @@ class ExpenseOutbox(
      * Keeps an expense that could not be sent. Only ever for a network
      * failure: a `BAD_REQUEST` is the server refusing the expense itself.
      */
-    suspend fun enqueue(groupId: String, input: ExpenseInput): String {
+    suspend fun enqueue(
+        groupId: String,
+        input: ExpenseInput,
+        expenseId: String = ExpenseIds.random(),
+    ): String {
         val id = UUID.randomUUID().toString()
-        dao.enqueue(input.toEntity(id, groupId), input.paidForEntities(id))
+        dao.enqueue(input.toEntity(id, groupId, expenseId), input.paidForEntities(id))
         return id
     }
 
@@ -94,38 +104,44 @@ class ExpenseOutbox(
     private enum class SendOutcome { Sent, Rejected, Unreachable }
 
     private suspend fun send(queued: PendingExpense): SendOutcome {
-        // Only for an expense that has actually been tried, so two identical
-        // ones typed offline are never confused before either goes out.
-        if (queued.attempts > 0 && alreadySent(queued)) {
-            dao.remove(queued.id)
-            return SendOutcome.Sent
+        val expenseId = queued.expenseId ?: ExpenseIds.random().also { dao.assignExpenseId(queued.id, it) }
+
+        // Every queued expense was tried once already, when it was saved, and
+        // an id cannot be mistaken for another expense, so this always asks.
+        when (val existing = api.getExpense(queued.groupId, expenseId)) {
+            is SpliitResult.Success -> return sent(queued)
+
+            is SpliitResult.Failure -> if (existing.error is SpliitError.Network) {
+                return failed(queued, existing.error)
+            }
         }
+
+        // The guess is for an instance that ignored the id. Only once this has
+        // been tried from the queue, so two identical expenses typed offline
+        // are never confused before either goes out.
+        if (queued.attempts > 0 && alreadySent(queued)) return sent(queued)
 
         val result = api.createExpense(
             groupId = queued.groupId,
             expense = queued.input,
+            expenseId = expenseId,
             participantId = preferences.activeParticipantId(queued.groupId).first(),
         )
         return when (result) {
-            is SpliitResult.Success -> {
-                dao.remove(queued.id)
-                cache.refreshAfterExpenseChange(queued.groupId, ExpenseRepository.DEFAULT_PAGE_SIZE)
-                SendOutcome.Sent
-            }
-
-            is SpliitResult.Failure -> {
-                dao.recordAttempt(
-                    id = queued.id,
-                    attempts = queued.attempts + 1,
-                    error = result.error.shortCode(),
-                )
-                if (result.error is SpliitError.Network) {
-                    SendOutcome.Unreachable
-                } else {
-                    SendOutcome.Rejected
-                }
-            }
+            is SpliitResult.Success -> sent(queued)
+            is SpliitResult.Failure -> failed(queued, result.error)
         }
+    }
+
+    private suspend fun sent(queued: PendingExpense): SendOutcome {
+        dao.remove(queued.id)
+        cache.refreshAfterExpenseChange(queued.groupId, ExpenseRepository.DEFAULT_PAGE_SIZE)
+        return SendOutcome.Sent
+    }
+
+    private suspend fun failed(queued: PendingExpense, error: SpliitError): SendOutcome {
+        dao.recordAttempt(id = queued.id, attempts = queued.attempts + 1, error = error.shortCode())
+        return if (error is SpliitError.Network) SendOutcome.Unreachable else SendOutcome.Rejected
     }
 
     /**
@@ -159,6 +175,7 @@ class ExpenseOutbox(
 private fun PendingExpenseWithPaidFor.toPending() = PendingExpense(
     id = expense.id,
     groupId = expense.groupId,
+    expenseId = expense.expenseId,
     input = ExpenseInput(
         title = expense.title,
         amount = expense.amount,
@@ -183,9 +200,10 @@ private fun PendingExpenseWithPaidFor.toPending() = PendingExpense(
     lastError = expense.lastError,
 )
 
-private fun ExpenseInput.toEntity(id: String, groupId: String) = PendingExpenseEntity(
+private fun ExpenseInput.toEntity(id: String, groupId: String, expenseId: String) = PendingExpenseEntity(
     id = id,
     groupId = groupId,
+    expenseId = expenseId,
     title = title,
     amount = amount,
     expenseDate = expenseDate.toString(),

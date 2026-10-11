@@ -3,6 +3,7 @@ package io.github.fmaruejol.ardoise.data
 import android.app.Application
 import io.github.fmaruejol.ardoise.api.ExpenseInput
 import io.github.fmaruejol.ardoise.core.model.Category
+import io.github.fmaruejol.ardoise.core.model.Expense
 import io.github.fmaruejol.ardoise.core.model.ExpensePage
 import io.github.fmaruejol.ardoise.core.model.ExpenseSummary
 import io.github.fmaruejol.ardoise.core.model.PaidFor
@@ -222,10 +223,90 @@ class ExpenseOutboxTest {
         advanceUntilIdle()
 
         assertEquals(1, api.callsTo("createExpense").size)
-        // And nothing was looked up first: with no attempt behind it there is
-        // nothing ambiguous to check.
-        assertEquals("createExpense", api.calls.first().procedure)
+        // No guess before the send: with no attempt from the queue behind it,
+        // matching fields say nothing about whether it is this one. The feed
+        // is read only afterwards, by the refresh a new expense calls for.
+        val procedures = api.calls.map { it.procedure }
+        assertTrue(procedures.indexOf("listExpenses") > procedures.indexOf("createExpense"))
     }
+
+    // --- the id it is created with -------------------------------------------
+
+    @Test
+    fun `an expense is created with the id it was queued with`() = runTest(dispatcher) {
+        outbox.enqueue("g1", input(), expenseId = "V1StGXR8_Z5jdHi6B-myT")
+        advanceUntilIdle()
+
+        outbox.flush()
+        advanceUntilIdle()
+
+        assertEquals("V1StGXR8_Z5jdHi6B-myT", api.callsTo("createExpense").single().arguments[3])
+    }
+
+    @Test
+    fun `asks for the id before sending, and finds one that landed`() = runTest(dispatcher) {
+        outbox.enqueue("g1", input(), expenseId = "V1StGXR8_Z5jdHi6B-myT")
+        advanceUntilIdle()
+        // The send that queued it reached the server; its answer did not come back.
+        api.getExpenseResult = SpliitResult.Success(serverCopy("V1StGXR8_Z5jdHi6B-myT"))
+
+        assertEquals(1, outbox.flush())
+        advanceUntilIdle()
+
+        assertEquals(listOf("g1", "V1StGXR8_Z5jdHi6B-myT"), api.callsTo("getExpense").single().arguments)
+        assertTrue(api.callsTo("createExpense").isEmpty())
+        assertTrue(outbox.pending("g1").first().isEmpty())
+    }
+
+    @Test
+    fun `an id the server has never seen is sent`() = runTest(dispatcher) {
+        outbox.enqueue("g1", input())
+        advanceUntilIdle()
+        api.getExpenseResult = SpliitResult.Failure(SpliitError.NotFound)
+
+        assertEquals(1, outbox.flush())
+        advanceUntilIdle()
+
+        assertEquals(1, api.callsTo("createExpense").size)
+    }
+
+    @Test
+    fun `not being able to ask stops the flush without sending`() = runTest(dispatcher) {
+        outbox.enqueue("g1", input())
+        advanceUntilIdle()
+        api.getExpenseResult = SpliitResult.Failure(offline())
+
+        assertEquals(0, outbox.flush())
+        advanceUntilIdle()
+
+        assertTrue(api.callsTo("createExpense").isEmpty())
+        assertEquals(1, outbox.pending("g1").first().single().attempts)
+    }
+
+    @Test
+    fun `an expense queued before ids were sent is given one and keeps it`() =
+        runTest(dispatcher) {
+            val database = testOutboxDatabase(dispatcher)
+            val legacy = ExpenseOutbox(api, database.outbox(), cache, preferences)
+            val id = legacy.enqueue("g1", input())
+            database.outbox().find(id)!!.let { row ->
+                database.outbox().enqueue(row.expense.copy(expenseId = null), row.paidFor)
+            }
+            advanceUntilIdle()
+            api.createExpenseResult = SpliitResult.Failure(offline())
+
+            legacy.flush()
+            legacy.flush()
+            advanceUntilIdle()
+
+            val sent = api.callsTo("createExpense").map { it.arguments[3] as String }
+            assertEquals(2, sent.size)
+            assertTrue(sent.first().matches(Regex("[A-Za-z0-9_-]{21}")))
+            // The second attempt is under the first one's id, or it could not
+            // find the first one if it had landed.
+            assertEquals(sent.first(), sent.last())
+            assertEquals(sent.first(), legacy.pending("g1").first().single().expenseId)
+        }
 
     @Test
     fun `attributes a queued expense to whoever the user says they are`() =
@@ -274,6 +355,26 @@ class ExpenseOutboxTest {
 
         assertTrue(api.calls.isEmpty())
     }
+
+    private fun serverCopy(id: String) = Expense(
+        id = id,
+        groupId = "g1",
+        title = "Taxi",
+        amount = 2200,
+        originalAmount = null,
+        originalCurrency = null,
+        conversionRate = null,
+        expenseDate = LocalDate.parse("2026-09-11"),
+        createdAt = Instant.now(),
+        category = null,
+        paidById = "p1",
+        paidFor = listOf(PaidFor("p1", 1), PaidFor("p2", 1)),
+        splitMode = SplitMode.EVENLY,
+        recurrenceRule = RecurrenceRule.NONE,
+        isReimbursement = false,
+        notes = null,
+        documents = emptyList(),
+    )
 
     private fun serverExpense(
         title: String,

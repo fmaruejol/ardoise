@@ -1,5 +1,6 @@
 package io.github.fmaruejol.ardoise.data
 
+import io.github.fmaruejol.ardoise.api.ExpenseIds
 import io.github.fmaruejol.ardoise.api.ExpenseInput
 import io.github.fmaruejol.ardoise.api.SpliitApi
 import io.github.fmaruejol.ardoise.core.model.Expense
@@ -7,6 +8,7 @@ import io.github.fmaruejol.ardoise.core.model.ExpensePage
 import io.github.fmaruejol.ardoise.core.prefs.GroupPreferences
 import io.github.fmaruejol.ardoise.core.result.SpliitError
 import io.github.fmaruejol.ardoise.core.result.SpliitResult
+import io.github.fmaruejol.ardoise.core.result.map
 import io.github.fmaruejol.ardoise.data.local.SpliitCache
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -82,11 +84,19 @@ class ExpenseRepository(
      * expense is merely waiting. A `BAD_REQUEST` is the server refusing this
      * expense, and queueing that would promise to send something it will never
      * accept. Nothing retries by itself. See [ExpenseOutbox].
+     *
+     * A queued expense keeps [expenseId]: the send that failed may have landed
+     * under it, and that is how the outbox finds out.
      */
-    suspend fun create(groupId: String, expense: ExpenseInput): SpliitResult<Created> {
+    suspend fun create(
+        groupId: String,
+        expense: ExpenseInput,
+        expenseId: String = ExpenseIds.random(),
+    ): SpliitResult<Created> {
         val result = api.createExpense(
             groupId = groupId,
             expense = expense,
+            expenseId = expenseId,
             participantId = activeParticipant(groupId),
         )
         return when (result) {
@@ -97,7 +107,7 @@ class ExpenseRepository(
 
             is SpliitResult.Failure -> {
                 if (result.error is SpliitError.Network) {
-                    SpliitResult.Success(Created.Queued(outbox.enqueue(groupId, expense)))
+                    SpliitResult.Success(Created.Queued(outbox.enqueue(groupId, expense, expenseId)))
                 } else {
                     result
                 }
@@ -109,14 +119,32 @@ class ExpenseRepository(
      * Replaces a queued expense with an edited one: the old entry goes and the
      * edit takes the ordinary create path, so it cannot leave the original
      * behind.
+     *
+     * Under the same id, because it is the same expense. If an earlier send
+     * landed after all, the edit is applied to it rather than created beside it.
      */
     suspend fun replaceQueued(
         pendingId: String,
         groupId: String,
         expense: ExpenseInput,
     ): SpliitResult<Created> {
+        val expenseId = outbox.find(pendingId)?.expenseId
+        if (expenseId != null) {
+            when (val existing = api.getExpense(groupId, expenseId)) {
+                is SpliitResult.Success -> {
+                    val updated = update(groupId, expenseId, expense)
+                    if (updated is SpliitResult.Success) outbox.discard(pendingId)
+                    return updated.map { Created.Sent(it) }
+                }
+
+                // Unknown either way, so the entry stays as it was.
+                is SpliitResult.Failure -> {
+                    if (existing.error is SpliitError.Network) return existing
+                }
+            }
+        }
         outbox.discard(pendingId)
-        return create(groupId, expense)
+        return create(groupId, expense, expenseId ?: ExpenseIds.random())
     }
 
     /** Expenses typed offline in this group, oldest first. */

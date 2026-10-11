@@ -65,12 +65,16 @@ interface SpliitApi {
     suspend fun getExpense(groupId: String, expenseId: String): SpliitResult<Expense>
 
     /**
-     * Returns the new expense's id. **Not idempotent**: a retry after a
-     * timeout creates a second expense, which is a wrong balance for everyone.
+     * Returns the new expense's id. **Not idempotent** on an instance older
+     * than Spliit 1.26, which ignores [expenseId]: there a retry after a
+     * timeout creates a second expense. From 1.26 the expense takes
+     * [expenseId] (see [ExpenseIds]), so a retry can first ask whether it
+     * already exists.
      */
     suspend fun createExpense(
         groupId: String,
         expense: ExpenseInput,
+        expenseId: String,
         participantId: String? = null,
     ): SpliitResult<String>
 

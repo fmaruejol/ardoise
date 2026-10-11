@@ -87,7 +87,10 @@ Seven facts that have already bitten:
 - `Expense.conversionRate` is a Prisma `Decimal` sent as a string. Keep it text,
   never a `Double`.
 - Mutations are **not idempotent**. A retried `expenses.create` creates a second
-  expense. Never retry one automatically.
+  expense. Never retry one automatically. From Spliit 1.26 `create` takes a
+  client-minted `expenseId` (`api.ExpenseIds`), and every create here sends one;
+  that makes a lost send *findable*, not the call idempotent. Older instances
+  drop the field and mint their own.
 - `paidFor` has no `ORDER BY`. Anything showing participants in an order imposes
   it, normally the group's.
 - `expenses.list` and `activities.list` cap `limit` at **100**; a larger one is a
@@ -357,7 +360,9 @@ marks "(you)", the second is who paid and only *starts* there.
 
 **A save is never retried on its own** because `create` is not idempotent: one
 that cannot reach the server is queued, one the server refuses stays on the form.
-`pendingId` opens a queued expense, and saving **replaces** that entry.
+`pendingId` opens a queued expense, and saving **replaces** that entry under the
+same expense id; if an earlier send of it landed after all, the edit becomes an
+update of that expense rather than a second one.
 
 The form sends no `documents`; `ExpenseRepository.update` reads the set back and
 carries it over, or an edit here would delete an attachment added on the web.
@@ -489,16 +494,21 @@ expense itself.
 **The queue is visible and the user drives it.** Queued expenses are their own
 section at the top of the feed, **dashed** in the error role, since a solid card
 would read as one more thing in the list. A row opens the form to edit or discard.
-That visibility is what makes retrying safe: `create` has no idempotency key, so a
-send whose answer was lost cannot be told from one that never arrived, and nothing
-retries silently where a duplicate would go unnoticed.
+That visibility is what makes retrying safe: a send whose answer was lost looks
+like one that never arrived, and nothing retries silently where a duplicate would
+go unnoticed.
 
-`ExpenseOutbox.alreadySent` narrows that window before a *re*-send by looking for
-an expense with the same title, amount, date and payer created since this one was
-queued. It can drop the second of two genuinely identical expenses — a missing
-expense the user can see and re-add, rather than a duplicate skewing a balance
-nobody rechecks. **If the server ever accepts a client-supplied expense id, delete
-this function.**
+**A queued expense keeps the id its first send used** (`PendingExpenseEntity.expenseId`),
+and every send from the queue first asks `expenses.get` for it. Found means the
+earlier send landed, and it is not sent again. On 1.26 and later that is exact.
+Rows queued before the column existed are given an id before their next send.
+
+`ExpenseOutbox.alreadySent` remains for instances older than 1.26, which ignore
+the id: when the id is not found it looks for an expense with the same title,
+amount, date and payer created since this one was queued. It can drop the second
+of two genuinely identical expenses — a missing expense the user can see and
+re-add, rather than a duplicate skewing a balance nobody rechecks. **Delete it once
+no supported instance predates 1.26.**
 
 Three rules, each tested: **oldest first, and a network failure stops the flush**;
 **a rejected expense does not stop the ones behind it**; **one flush at a time**,
