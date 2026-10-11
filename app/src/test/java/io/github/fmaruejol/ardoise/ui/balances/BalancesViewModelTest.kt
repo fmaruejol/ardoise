@@ -111,7 +111,10 @@ class BalancesViewModelTest {
     @Test
     fun `counts only the people on the other side of you`() = runTest(dispatcher) {
         preferences.setActiveParticipantId("g1", "p1")
-        balances("p1" to 6000L, "p2" to -4000L, "p3" to -2000L)
+        balances(
+            "p1" to 6000L, "p2" to -4000L, "p3" to -2000L,
+            settling = listOf(Reimbursement("p2", "p1", 4000), Reimbursement("p3", "p1", 2000)),
+        )
         val viewModel = viewModel()
         advanceUntilIdle()
 
@@ -122,11 +125,30 @@ class BalancesViewModelTest {
     @Test
     fun `someone up with you is not a counterparty`() = runTest(dispatcher) {
         preferences.setActiveParticipantId("g1", "p1")
-        balances("p1" to 4000L, "p2" to 2000L, "p3" to -6000L)
+        balances(
+            "p1" to 4000L, "p2" to 2000L, "p3" to -6000L,
+            settling = listOf(Reimbursement("p3", "p1", 4000), Reimbursement("p3", "p2", 2000)),
+        )
         val viewModel = viewModel()
         advanceUntilIdle()
 
         // Ben is owed money too; he is not who Ana collects from.
+        assertEquals(1, viewModel.state.value.counterparties)
+    }
+
+    @Test
+    fun `counts who the suggestions have you pay, not everyone owed`() = runTest(dispatcher) {
+        preferences.setActiveParticipantId("g1", "p1")
+        // Two people are owed, but the suggested payments settle Ana with one
+        // of them; Settle up lists one payment, so the count says one.
+        balances(
+            "p1" to -3000L, "p2" to -1000L, "p3" to 3000L, "p4" to 1000L,
+            settling = listOf(Reimbursement("p1", "p3", 3000), Reimbursement("p2", "p4", 1000)),
+        )
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        assertEquals(-3000L, viewModel.state.value.yourPosition)
         assertEquals(1, viewModel.state.value.counterparties)
     }
 

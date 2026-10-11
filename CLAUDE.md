@@ -385,6 +385,9 @@ idempotent and nothing undoes it.
   form. Its title resolves in the `NavHost`, since a ViewModel has no `Context`.
 - **The suggestions are a chain**: what a payment clears is read by walking the
   list and taking each amount off, because each assumes the ones above were made.
+- "You owe 2 people" counts the people **the suggestions** pair you with, not
+  everyone on the other side of your balance: the chain can route you to fewer
+  of them, and Settle up lists the chain.
 
 ## Totals
 

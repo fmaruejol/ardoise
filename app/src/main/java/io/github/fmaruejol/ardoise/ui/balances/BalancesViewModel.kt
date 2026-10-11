@@ -38,7 +38,11 @@ data class BalancesUiState(
     val rows: List<BalanceRow> = emptyList(),
     /** This device's own position, or null until it knows which participant it is. */
     val yourPosition: Long? = null,
-    /** How many people are on the other side of your position. */
+    /**
+     * How many people the suggested payments have you paying, or paid by.
+     * Not everyone on the other side of your balance: the suggestions can
+     * route you to fewer of them, and Settle up lists the suggestions.
+     */
     val counterparties: Int = 0,
     val canSettle: Boolean = false,
     /** The "which one is you" dialog, opened from this screen's own prompt. */
@@ -162,12 +166,23 @@ class BalancesViewModel(
             },
             yourPosition = yours,
             counterparties = when {
-                yours == null || yours == 0L -> 0
+                yours == null || yours == 0L -> {
+                    0
+                }
 
-                // Whoever is on the other side of you.
-                yours > 0 -> totals.count { (id, total) -> id != me && total < 0 }
+                yours > 0 -> {
+                    balances.reimbursements
+                        .filter { it.toParticipantId == me }
+                        .distinctBy { it.fromParticipantId }
+                        .size
+                }
 
-                else -> totals.count { (id, total) -> id != me && total > 0 }
+                else -> {
+                    balances.reimbursements
+                        .filter { it.fromParticipantId == me }
+                        .distinctBy { it.toParticipantId }
+                        .size
+                }
             },
             canSettle = balances.reimbursements.isNotEmpty(),
         )
