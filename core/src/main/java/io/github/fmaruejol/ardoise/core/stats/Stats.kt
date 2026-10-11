@@ -6,10 +6,10 @@ import java.time.temporal.ChronoUnit
 import kotlin.math.abs
 
 /**
- * A group's spending as the server adds it up, through `groups.stats.*`, so
- * that this client and the web show the same figures. Minor units throughout,
- * and **reimbursements are excluded from every figure** by the server: they are
- * people settling up, not the group spending more.
+ * A group's spending as the server adds it up, through `groups.stats.*`.
+ * Minor units throughout, and **reimbursements are excluded from every
+ * figure** by the server: they are people settling up, not the group spending
+ * more.
  */
 data class GroupStats(
     val total: Long,

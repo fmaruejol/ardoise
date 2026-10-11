@@ -7,8 +7,7 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * A group's spending, as the server adds it up. Not computed from the cached
- * expenses, which are one page of the group, and the web and iOS clients read
- * the same figures from the same procedure.
+ * expenses, which are one page of the group.
  */
 class StatsRepository(private val cache: SpliitCache) {
     fun stats(groupId: String): Flow<SpliitResult<GroupStats?>> =

@@ -64,10 +64,9 @@ data class TotalsUiState(
 }
 
 /**
- * A group's spending, as `groups.stats.overview` adds it up, the procedure the
- * web and iOS clients read. Adding up the cached feed instead would need every
- * expense in the group, and would be a second implementation of the server's
- * arithmetic for the two to disagree over.
+ * A group's spending, as `groups.stats.overview` adds it up. Adding up the
+ * cached feed instead would need every expense in the group, and would be a
+ * second implementation of the server's arithmetic to disagree with.
  */
 class TotalsViewModel(
     private val groupId: String,
