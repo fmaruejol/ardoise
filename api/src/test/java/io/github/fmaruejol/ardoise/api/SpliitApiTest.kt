@@ -306,6 +306,26 @@ class SpliitApiTest {
         assertEquals(listOf(0 to 100, 100 to 20), List(2) { server.takeRequest().cursorAndLimit() })
     }
 
+    @Test
+    fun `more than 100 groups are asked for in batches the server accepts`() = runTest {
+        repeat(2) { server.enqueue(ok("""{"result":{"data":{"json":{"groups":[]}}}}""")) }
+
+        api.listGroups((1..150).map { "g$it" })
+
+        val sizes = List(2) { server.takeRequest().groupIdCount("groupIds") }
+        assertEquals(listOf(100, 50), sizes)
+    }
+
+    @Test
+    fun `balances across more than 100 groups are asked for in batches`() = runTest {
+        repeat(2) { server.enqueue(ok("""{"result":{"data":{"json":{"balances":[]}}}}""")) }
+
+        api.balancesForUser((1..101).map { "g$it" to "p" })
+
+        val sizes = List(2) { server.takeRequest().groupIdCount("groups") }
+        assertEquals(listOf(100, 1), sizes)
+    }
+
     // --- errors ------------------------------------------------------------
 
     @Test
@@ -378,6 +398,11 @@ class SpliitApiTest {
     private fun expensePage(id: String, hasMore: Boolean) = ok(
         EXPENSES_RESPONSE.replace("\"e1\"", "\"$id\"").replace("\"hasMore\":true", "\"hasMore\":$hasMore"),
     )
+
+    private fun RecordedRequest.groupIdCount(field: String): Int {
+        val input = Json.parseToJsonElement(inputParameter()!!) as JsonObject
+        return ((input["json"] as JsonObject)[field] as kotlinx.serialization.json.JsonArray).size
+    }
 
     private fun RecordedRequest.cursorAndLimit(): Pair<Int, Int> {
         val input = Json.parseToJsonElement(inputParameter()!!) as JsonObject

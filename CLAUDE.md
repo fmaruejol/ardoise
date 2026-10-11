@@ -92,7 +92,9 @@ Seven facts that have already bitten:
   it, normally the group's.
 - `expenses.list` and `activities.list` cap `limit` at **100**; a larger one is a
   `BAD_REQUEST`. `SpliitApiClient` fetches past it as consecutive cursor requests,
-  so callers still ask for "the newest N".
+  so callers still ask for "the newest N". `groups.list` and
+  `groups.balances.forUser` take at most **100 groups**, and are batched the same
+  way.
 - An expense update **replaces its documents** — upstream deletes every one whose
   id is absent from the payload.
 

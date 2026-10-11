@@ -74,11 +74,13 @@ class SpliitApiClient(private val client: TrpcClient) : SpliitApi {
         }
 
     override suspend fun listGroups(groupIds: List<String>): SpliitResult<List<GroupSummary>> =
-        client.query(
-            procedure = Procedures.GROUPS_LIST,
-            deserializer = ListGroupsResponse.serializer(),
-            input = encode(GroupIdsInput.serializer(), GroupIdsInput(groupIds)),
-        ).mapCatching { response -> response.groups.map { it.toDomain() } }
+        inBatches(groupIds) { batch ->
+            client.query(
+                procedure = Procedures.GROUPS_LIST,
+                deserializer = ListGroupsResponse.serializer(),
+                input = encode(GroupIdsInput.serializer(), GroupIdsInput(batch)),
+            ).mapCatching { response -> response.groups.map { it.toDomain() } }
+        }
 
     override suspend fun createGroup(group: GroupInput): SpliitResult<String> =
         client.mutation(
@@ -192,18 +194,20 @@ class SpliitApiClient(private val client: TrpcClient) : SpliitApi {
     override suspend fun balancesForUser(
         groups: List<Pair<String, String>>,
     ): SpliitResult<List<UserGroupBalance>> =
-        client.query(
-            procedure = Procedures.BALANCES_FOR_USER,
-            deserializer = ForUserBalancesResponse.serializer(),
-            input = encode(
-                ForUserBalancesInput.serializer(),
-                ForUserBalancesInput(
-                    groups.map { (groupId, participantId) ->
-                        UserGroupRefInput(groupId, participantId)
-                    },
+        inBatches(groups) { batch ->
+            client.query(
+                procedure = Procedures.BALANCES_FOR_USER,
+                deserializer = ForUserBalancesResponse.serializer(),
+                input = encode(
+                    ForUserBalancesInput.serializer(),
+                    ForUserBalancesInput(
+                        batch.map { (groupId, participantId) ->
+                            UserGroupRefInput(groupId, participantId)
+                        },
+                    ),
                 ),
-            ),
-        ).mapCatching { response -> response.balances.map { it.toDomain() } }
+            ).mapCatching { response -> response.balances.map { it.toDomain() } }
+        }
 
     // --- stats -------------------------------------------------------------
 
@@ -294,9 +298,28 @@ class SpliitApiClient(private val client: TrpcClient) : SpliitApi {
         return SpliitResult.Success(rows.distinctBy(id) to hasMore)
     }
 
+    /** One request per [MAX_GROUPS] items, answers joined in order. */
+    private suspend fun <T, R> inBatches(
+        items: List<T>,
+        fetch: suspend (List<T>) -> SpliitResult<List<R>>,
+    ): SpliitResult<List<R>> {
+        if (items.size <= MAX_GROUPS) return fetch(items)
+        val joined = mutableListOf<R>()
+        for (batch in items.chunked(MAX_GROUPS)) {
+            when (val result = fetch(batch)) {
+                is SpliitResult.Failure -> return result
+                is SpliitResult.Success -> joined += result.value
+            }
+        }
+        return SpliitResult.Success(joined)
+    }
+
     private companion object {
         /** Upstream's zod schema for both list procedures: `limit` is at most 100. */
         const val MAX_PAGE = 100
+
+        /** `MAX_GROUPS_PER_QUERY`, for `groups.list` and `groups.balances.forUser`. */
+        const val MAX_GROUPS = 100
     }
 }
 
