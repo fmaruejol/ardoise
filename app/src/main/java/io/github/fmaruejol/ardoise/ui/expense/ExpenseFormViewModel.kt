@@ -112,6 +112,13 @@ data class ExpenseFormUiState(
     val fetchingRate: Boolean = false,
     /** Set when a look-up came back with nothing; cleared by typing. */
     val rateUnavailable: Boolean = false,
+    /**
+     * A converted expense's group amount as the server has it, kept until the
+     * amount, its currency or the rate is edited. It is not always original ×
+     * rate: upstream never recomputes it, and fixes it rather than the original
+     * on a repayment, so recomputing on a title edit would move a balance.
+     */
+    val storedAmount: Long? = null,
     val date: LocalDate = LocalDate.now(),
     val categoryId: Int = 0,
     val categories: List<Category> = emptyList(),
@@ -190,6 +197,8 @@ data class ExpenseFormUiState(
      */
     val amount: Long
         get() = when {
+            storedAmount != null -> storedAmount
+
             !isConverted -> enteredAmount ?: 0L
 
             else -> conversionRate?.let { rate ->
@@ -395,6 +404,7 @@ class ExpenseFormViewModel(
             currency = currency,
             entryCurrency = entry,
             conversionRateText = if (converted) rateText(expense.conversionRate) else "",
+            storedAmount = expense.amount.takeIf { converted },
             participants = group.participants,
             title = expense.title,
             amountText = entry.formatPlain(
@@ -446,7 +456,11 @@ class ExpenseFormViewModel(
     private fun ExpenseFormUiState.withDraft(draft: ExpenseFormDraft?): ExpenseFormUiState {
         if (draft == null) return this
         val ids = participants.map { it.id }.toSet()
+        val amountUntouched = draft.amountText == amountText &&
+            draft.entryCurrencyCode == entryCurrency.code?.takeIf { it != currency.code } &&
+            draft.conversionRateText == conversionRateText
         return copy(
+            storedAmount = storedAmount.takeIf { amountUntouched },
             title = draft.title,
             amountText = draft.amountText,
             entryCurrency = entryCurrencyFor(draft.entryCurrencyCode, currency),
@@ -471,8 +485,9 @@ class ExpenseFormViewModel(
     fun onTitleChange(title: String) =
         _state.update { it.copy(title = title, errors = it.errors - ExpenseFormError.Title) }
 
-    fun onAmountChange(text: String) =
-        _state.update { it.copy(amountText = text, errors = it.errors - ExpenseFormError.Amount) }
+    fun onAmountChange(text: String) = _state.update {
+        it.copy(amountText = text, storedAmount = null, errors = it.errors - ExpenseFormError.Amount)
+    }
 
     // --- the currency it was paid in ---------------------------------------
 
@@ -496,6 +511,7 @@ class ExpenseFormViewModel(
             it.copy(
                 entryCurrency = chosen,
                 pickingEntryCurrency = false,
+                storedAmount = null,
                 conversionRateText = if (chosen.code == it.currency.code) "" else it.conversionRateText,
                 rateUnavailable = false,
                 errors = it.errors - ExpenseFormError.Rate,
@@ -518,6 +534,7 @@ class ExpenseFormViewModel(
         _state.update {
             it.copy(
                 conversionRateText = it.rateDraft,
+                storedAmount = if (it.rateDraft == it.conversionRateText) it.storedAmount else null,
                 editingRate = false,
                 rateUnavailable = false,
                 errors = it.errors - ExpenseFormError.Rate,
@@ -552,6 +569,7 @@ class ExpenseFormViewModel(
                         intoDraft -> state.conversionRateText
                         else -> text
                     },
+                    storedAmount = state.storedAmount.takeIf { text == null || intoDraft },
                     errors = if (text == null) state.errors else state.errors - ExpenseFormError.Rate,
                 )
             }

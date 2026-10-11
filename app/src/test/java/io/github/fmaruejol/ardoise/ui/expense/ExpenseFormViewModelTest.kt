@@ -568,6 +568,69 @@ class ExpenseFormViewModelTest {
             assertNull(input.conversionRate)
         }
 
+    private fun convertedOnTheWeb() = existing().copy(
+        // Not 1000 × 0.89238: the web fixes the group amount on a repayment,
+        // and never recomputes it.
+        amount = 1000,
+        originalAmount = 1000,
+        originalCurrency = "USD",
+        conversionRate = "0.89238",
+    )
+
+    @Test
+    fun `an unrelated edit keeps a converted expense's stored amount`() = runTest(dispatcher) {
+        api.getExpenseResult = SpliitResult.Success(convertedOnTheWeb())
+        val viewModel = viewModel("e1")
+        advanceUntilIdle()
+
+        viewModel.onTitleChange("Dinner out")
+        viewModel.onSave()
+        advanceUntilIdle()
+
+        val input = api.callsTo("updateExpense").single().arguments[2] as ExpenseInput
+        assertEquals(1000L, input.amount)
+        assertEquals(1000L, input.originalAmount)
+    }
+
+    @Test
+    fun `editing the amount or the rate converts again`() = runTest(dispatcher) {
+        api.getExpenseResult = SpliitResult.Success(convertedOnTheWeb())
+        val byAmount = viewModel("e1")
+        advanceUntilIdle()
+        byAmount.onAmountChange("20")
+        // 20 × 0.89238 = 17.8476.
+        assertEquals(1785L, byAmount.state.value.amount)
+
+        val byRate = viewModel("e1")
+        advanceUntilIdle()
+        byRate.onRateOpen()
+        byRate.onRateDraftChange("0.9")
+        byRate.onRateSave()
+        assertEquals(900L, byRate.state.value.amount)
+    }
+
+    @Test
+    fun `the stored amount outlives the process only while nothing it came from changed`() =
+        runTest(dispatcher) {
+            api.getExpenseResult = SpliitResult.Success(convertedOnTheWeb())
+            val saved = SavedStateHandle()
+            val before = viewModel(expenseId = "e1", savedState = saved)
+            advanceUntilIdle()
+            before.onTitleChange("Dinner out")
+            advanceUntilIdle()
+
+            val restored = saved.throughProcessDeath()
+            val after = viewModel(expenseId = "e1", savedState = restored)
+            advanceUntilIdle()
+            assertEquals(1000L, after.state.value.amount)
+
+            after.onAmountChange("20")
+            advanceUntilIdle()
+            val again = viewModel(expenseId = "e1", savedState = restored.throughProcessDeath())
+            advanceUntilIdle()
+            assertEquals(1785L, again.state.value.amount)
+        }
+
     @Test
     fun `clearing the note on an edit sends an empty one`() = runTest(dispatcher) {
         api.getExpenseResult = SpliitResult.Success(existing().copy(notes = "Booked by Ana"))
