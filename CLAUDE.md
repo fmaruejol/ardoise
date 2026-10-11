@@ -110,8 +110,10 @@ decides what that means. `1234` is `12.34` in euros and `¥1,234` in yen.
 - Never assume two decimals. Resolve scale from the group's code.
 - **A share's meaning depends on split mode** (table on `PaidFor` in `:core`):
   ×100 for `BY_SHARES` and `BY_PERCENTAGE`, raw minor units for `BY_AMOUNT`,
-  ignored for `EVENLY`. The server rescales only shares sent as *strings*; this
-  client sends numbers, so a wrong scale is stored as given.
+  ignored for `EVENLY` but sent as `SplitMode.EVENLY_SHARE` (100, upstream's one
+  share), so the expense reads right once split by shares. The server rescales
+  only shares sent as *strings*; this client sends numbers, so a wrong scale is
+  stored as given.
 
 Getting this wrong is a silently wrong balance. New arithmetic on amounts gets a
 unit test.
@@ -164,6 +166,18 @@ typed), so split sums and the recurrence preview need no idea a conversion
 happened. A group with no ISO code cannot convert, so the currency chip is flat.
 The split tile does not say "€19.29 each" because largest-remainder gives one
 participant a different cent.
+
+**`originalCurrency` is what says an expense was converted**, and it is always
+sent, as JSON null when there is none: left out, an update keeps the old one.
+`originalAmount` and `conversionRate` cannot be cleared (the schema refuses null),
+so they outlive a move back to the group's currency and are read only beside a
+currency. The form reopens such an expense on its group amount.
+
+**A converted expense keeps its stored group amount** (`storedAmount`) until the
+amount, its currency or the rate is edited. It is not always original × rate:
+upstream never recomputes it and fixes it, not the original, on a repayment, so a
+title edit that recomputed it would move a balance. Switching back to the group's
+currency puts that amount in the field rather than relabelling the typed number.
 
 ## Dates
 
