@@ -266,7 +266,9 @@ class GroupSettingsViewModel(
             errors += GroupSettingsError.ParticipantName(index)
         }
         val seen = mutableSetOf<String>()
-        named.filter { (_, it) -> !seen.add(it.name.lowercase()) }.forEach { (index, _) ->
+        // Exact, as upstream's schema compares them: a group made elsewhere
+        // with "Ann" and "ann" has to stay savable here.
+        named.filter { (_, it) -> !seen.add(it.name) }.forEach { (index, _) ->
             errors += GroupSettingsError.DuplicateParticipant(index)
         }
 

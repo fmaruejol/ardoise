@@ -297,11 +297,25 @@ class GroupSettingsViewModelTest {
         val viewModel = viewModel()
         advanceUntilIdle()
 
-        viewModel.onParticipantNameChange(1, "ana")
+        viewModel.onParticipantNameChange(1, "Ana")
         viewModel.onSave()
         advanceUntilIdle()
 
         assertTrue(GroupSettingsError.DuplicateParticipant(1) in viewModel.state.value.saveErrors)
+    }
+
+    @Test
+    fun `a group with names differing only in case can still be saved`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onParticipantNameChange(1, "ana")
+        viewModel.onSave()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value.saveErrors.isEmpty())
+        val input = api.callsTo("updateGroup").single().arguments[1] as GroupInput
+        assertEquals(listOf("Ana", "ana"), input.participants.map { it.name })
     }
 
     // --- a failed load, and the way back from it ----------------------------

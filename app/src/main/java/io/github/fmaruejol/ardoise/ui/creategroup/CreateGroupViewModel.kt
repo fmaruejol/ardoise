@@ -235,7 +235,8 @@ class CreateGroupViewModel(
             errors += CreateGroupError.ParticipantName(index)
         }
         val seen = mutableSetOf<String>()
-        named.filter { (_, name) -> !seen.add(name.lowercase()) }.forEach { (index, _) ->
+        // Exact, as upstream's schema compares them: "Ann" and "ann" are two people.
+        named.filter { (_, name) -> !seen.add(name) }.forEach { (index, _) ->
             // The second of each pair, which the user just typed.
             errors += CreateGroupError.DuplicateParticipant(index)
         }

@@ -239,7 +239,7 @@ class CreateGroupViewModelTest {
     fun `refuses two participants with the same name`() = runTest(dispatcher) {
         val viewModel = viewModel()
 
-        fill(viewModel, "Ana", "ana")
+        fill(viewModel, "Ana", "Ana")
         viewModel.onSave()
         advanceUntilIdle()
 
@@ -247,6 +247,22 @@ class CreateGroupViewModelTest {
         assertTrue(CreateGroupError.DuplicateParticipant(1) in viewModel.state.value.errors)
         assertTrue(api.callsTo("createGroup").isEmpty())
     }
+
+    @Test
+    fun `names differing only in case are two people, as the server takes them`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel()
+            viewModel.onNameChange("Lisbon trip")
+            fill(viewModel, "Ann", "ann")
+            viewModel.onYouChange(0)
+
+            viewModel.onSave()
+            advanceUntilIdle()
+
+            assertTrue(viewModel.state.value.errors.none { it is CreateGroupError.DuplicateParticipant })
+            val input = api.callsTo("createGroup").single().arguments.single() as GroupInput
+            assertEquals(listOf("Ann", "ann"), input.participants.map { it.name })
+        }
 
     @Test
     fun `ignores blank rows rather than refusing them`() = runTest(dispatcher) {
@@ -389,7 +405,7 @@ class CreateGroupViewModelTest {
     fun `marks the duplicate rather than the original`() = runTest(dispatcher) {
         val viewModel = viewModel()
         viewModel.onNameChange("Lisbon trip")
-        fill(viewModel, "Ana", "Ben", "ana")
+        fill(viewModel, "Ana", "Ben", "Ana")
 
         viewModel.onSave()
         advanceUntilIdle()
@@ -405,7 +421,7 @@ class CreateGroupViewModelTest {
         viewModel.onAddParticipant()
         viewModel.onParticipantChange(1, "y")
         viewModel.onAddParticipant()
-        viewModel.onParticipantChange(2, "ana")
+        viewModel.onParticipantChange(2, "Ana")
 
         viewModel.onSave()
         advanceUntilIdle()

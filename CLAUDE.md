@@ -623,6 +623,9 @@ the scale of every amount in the group.
 
 A participant who is on an expense cannot be removed. The server refuses, and so
 does this, with the reason rather than a relayed `BAD_REQUEST`.
+
+Duplicate participant names are compared **exactly**, as upstream's schema does:
+"Ann" and "ann" are two people, and a group holding both must stay savable here.
 `groups.getDetails` exists to say which ones those are.
 
 The invite QR is a real encoding of the group URL through `com.google.zxing:core`:
