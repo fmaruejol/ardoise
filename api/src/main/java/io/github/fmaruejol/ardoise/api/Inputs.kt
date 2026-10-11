@@ -26,6 +26,24 @@ data class ParticipantInput(
 )
 
 /**
+ * Upstream's `expenseFormSchema` limits. The server refuses an expense outside
+ * them, so the form checks them first: one saved offline would otherwise sit in
+ * the outbox until the server could refuse it.
+ */
+object ExpenseLimits {
+    /** UTF-16 units, which is what both `String.length`s count. */
+    val TITLE_LENGTH: IntRange = 2..200
+
+    /**
+     * Minor units, for the group's amount and the original alike. Bounded
+     * above only, as upstream bounds it.
+     */
+    const val MAX_AMOUNT: Long = 1_000_000_000
+
+    const val NOTES_MAX_LENGTH: Int = 5_000
+}
+
+/**
  * What the caller supplies to create or update an expense. [amount] and every
  * share are in minor units.
  *

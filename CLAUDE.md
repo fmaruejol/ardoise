@@ -292,6 +292,12 @@ checked only when the first held (split sums are not compared against a missing
 amount), and the split editor opens itself only when the sums are the *whole* of
 what is wrong.
 
+**The rules include upstream's schema limits** (`api.ExpenseLimits`): title 2–200
+characters, an amount and an original amount of at most 1,000,000,000 minor units,
+notes of at most 5,000, and no share below zero in any mode — so money received
+cannot be split by amount. Without them a save the server will refuse is queued
+offline and only refused when the outbox sends it.
+
 **An error goes on the field it is about**, reason underneath as `supportingText`.
 Only `Failed` — the server refusing the whole thing — sits at the foot.
 

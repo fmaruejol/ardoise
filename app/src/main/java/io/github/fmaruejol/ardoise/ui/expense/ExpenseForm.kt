@@ -225,9 +225,13 @@ internal fun Form(
                 enabled = !state.isSaving,
                 singleLine = false,
                 minHeight = 72.dp,
+                isError = ExpenseFormError.Notes in state.errors,
+                supportingText = state.errorOf(ExpenseFormError.Notes)?.describe(state),
                 // The label hangs above the field's own top, and the chips are
                 // directly above it.
-                modifier = Modifier.padding(top = FieldLabelOverhang),
+                modifier = Modifier
+                    .padding(top = FieldLabelOverhang)
+                    .scrollTarget(scroller, ScrollKey.Notes),
             )
         }
 
@@ -279,8 +283,8 @@ private fun ReimbursementRow(
     }
 }
 
-/** The three places on the form a save can send the user back to. */
-private enum class ScrollKey { Amount, Title, Split }
+/** The places on the form a save can send the user back to. */
+private enum class ScrollKey { Amount, Title, Split, Notes }
 
 /** Which of them an error belongs to. */
 private val ExpenseFormError.scrollKey: ScrollKey
@@ -290,13 +294,17 @@ private val ExpenseFormError.scrollKey: ScrollKey
 
         ExpenseFormError.Title -> ScrollKey.Title
 
+        ExpenseFormError.Notes -> ScrollKey.Notes
+
         else -> ScrollKey.Split
     }
 
 /** What is wrong with the split, which is the tile that opens the editor. */
 private val ExpenseFormUiState.splitError: ExpenseFormError?
     get() = errors.firstOrNull {
-        it is ExpenseFormError.NobodyPaidFor || it is ExpenseFormError.SplitTotal
+        it is ExpenseFormError.NobodyPaidFor ||
+            it is ExpenseFormError.SplitTotal ||
+            it is ExpenseFormError.NegativeShare
     }
 
 @Composable

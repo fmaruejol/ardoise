@@ -914,6 +914,74 @@ class ExpenseFormViewModelTest {
         assertEquals(setOf(ExpenseFormError.Amount), viewModel.state.value.errors)
     }
 
+    // --- what the server refuses, refused here first ------------------------
+
+    private fun savedWith(title: String = "Dinner", amount: String = "30", notes: String = ""): ExpenseFormViewModel {
+        val viewModel = viewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+        viewModel.onTitleChange(title)
+        viewModel.onAmountChange(amount)
+        viewModel.onNotesChange(notes)
+        viewModel.onSave()
+        dispatcher.scheduler.advanceUntilIdle()
+        return viewModel
+    }
+
+    @Test
+    fun `a title takes two to two hundred characters, as upstream's schema does`() =
+        runTest(dispatcher) {
+            assertEquals(setOf(ExpenseFormError.Title), savedWith(title = "X").state.value.errors)
+            assertEquals(setOf(ExpenseFormError.Title), savedWith(title = "x".repeat(201)).state.value.errors)
+            assertTrue(savedWith(title = "x".repeat(200)).state.value.errors.isEmpty())
+            // Trimmed first, since the trimmed title is what is sent.
+            assertEquals(setOf(ExpenseFormError.Title), savedWith(title = " X ").state.value.errors)
+        }
+
+    @Test
+    fun `an amount past ten million is refused before the server can`() = runTest(dispatcher) {
+        // 1,000,000,000 minor units is upstream's ceiling, inclusive.
+        assertTrue(savedWith(amount = "10000000").state.value.errors.isEmpty())
+
+        val refused = savedWith(amount = "10000000.01")
+
+        assertEquals(setOf(ExpenseFormError.Amount), refused.state.value.errors)
+        assertTrue(refused.state.value.isOverLimit)
+    }
+
+    @Test
+    fun `a note past five thousand characters is marked, and typing clears it`() =
+        runTest(dispatcher) {
+            assertTrue(savedWith(notes = "x".repeat(5000)).state.value.errors.isEmpty())
+
+            val refused = savedWith(notes = "x".repeat(5001))
+            assertEquals(setOf(ExpenseFormError.Notes), refused.state.value.errors)
+
+            refused.onNotesChange("x")
+            assertTrue(refused.state.value.errors.isEmpty())
+        }
+
+    @Test
+    fun `money received cannot be split by amount, since no share may be below zero`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel()
+            advanceUntilIdle()
+            viewModel.onTitleChange("Refund")
+            viewModel.onAmountChange("-30")
+            viewModel.onSplitModeChange(SplitMode.BY_AMOUNT)
+
+            viewModel.onSave()
+            advanceUntilIdle()
+
+            assertEquals(setOf(ExpenseFormError.NegativeShare), viewModel.state.value.errors)
+            assertTrue(api.callsTo("createExpense").isEmpty())
+
+            // Evenly is how money received is split, and the server takes it.
+            viewModel.onSplitModeChange(SplitMode.EVENLY)
+            viewModel.onSave()
+            advanceUntilIdle()
+            assertEquals(1, api.callsTo("createExpense").size)
+        }
+
     @Test
     fun `does not complain about the split when there is no amount to split`() =
         runTest(dispatcher) {

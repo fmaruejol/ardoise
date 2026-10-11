@@ -34,6 +34,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.fmaruejol.ardoise.R
+import io.github.fmaruejol.ardoise.api.ExpenseLimits
 import io.github.fmaruejol.ardoise.core.currency.GroupCurrency
 import io.github.fmaruejol.ardoise.core.currency.format
 import io.github.fmaruejol.ardoise.ui.components.CurrencyChip
@@ -146,9 +147,27 @@ internal fun AmountField(
         }
 
         val complaint = when {
-            isError -> stringResource(R.string.expense_error_amount)
-            ExpenseFormError.Rate in state.errors -> stringResource(R.string.expense_error_rate)
-            else -> null
+            // Over in the currency it was typed in, or only once converted.
+            isError && state.isOverLimit -> {
+                val over = if ((state.enteredAmount ?: 0L) > ExpenseLimits.MAX_AMOUNT) {
+                    state.entryCurrency
+                } else {
+                    state.currency
+                }
+                stringResource(R.string.expense_error_amount_large, over.format(ExpenseLimits.MAX_AMOUNT))
+            }
+
+            isError -> {
+                stringResource(R.string.expense_error_amount)
+            }
+
+            ExpenseFormError.Rate in state.errors -> {
+                stringResource(R.string.expense_error_rate)
+            }
+
+            else -> {
+                null
+            }
         }
         if (complaint != null) {
             Text(

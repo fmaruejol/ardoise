@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import io.github.fmaruejol.ardoise.R
+import io.github.fmaruejol.ardoise.api.ExpenseLimits
 import io.github.fmaruejol.ardoise.core.currency.format
 import io.github.fmaruejol.ardoise.core.model.SplitMode
 import io.github.fmaruejol.ardoise.ui.describe
@@ -26,7 +27,21 @@ internal fun ExpenseFormUiState.splitSummary(): String {
 @Composable
 internal fun ExpenseFormError.describe(state: ExpenseFormUiState): String = when (this) {
     ExpenseFormError.Title -> {
-        stringResource(R.string.expense_error_title)
+        val length = state.title.trim().length
+        val allowed = ExpenseLimits.TITLE_LENGTH
+        when {
+            length == 0 -> {
+                stringResource(R.string.expense_error_title)
+            }
+
+            length > allowed.last -> {
+                pluralStringResource(R.plurals.expense_error_title_long, allowed.last, allowed.last)
+            }
+
+            else -> {
+                pluralStringResource(R.plurals.expense_error_title_short, allowed.first, allowed.first)
+            }
+        }
     }
 
     ExpenseFormError.Amount -> {
@@ -39,6 +54,22 @@ internal fun ExpenseFormError.describe(state: ExpenseFormUiState): String = when
 
     ExpenseFormError.NobodyPaidFor -> {
         stringResource(R.string.expense_error_nobody)
+    }
+
+    ExpenseFormError.NegativeShare -> {
+        if (state.splitMode == SplitMode.BY_AMOUNT && state.amount < 0) {
+            stringResource(R.string.expense_error_income_by_amount)
+        } else {
+            stringResource(R.string.expense_error_negative_share)
+        }
+    }
+
+    ExpenseFormError.Notes -> {
+        pluralStringResource(
+            R.plurals.expense_error_notes_long,
+            ExpenseLimits.NOTES_MAX_LENGTH,
+            ExpenseLimits.NOTES_MAX_LENGTH,
+        )
     }
 
     is ExpenseFormError.SplitTotal -> {

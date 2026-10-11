@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.fmaruejol.ardoise.api.ExchangeRates
 import io.github.fmaruejol.ardoise.api.ExpenseInput
+import io.github.fmaruejol.ardoise.api.ExpenseLimits
 import io.github.fmaruejol.ardoise.core.currency.GroupCurrency
 import io.github.fmaruejol.ardoise.core.currency.asStoredRate
 import io.github.fmaruejol.ardoise.core.currency.convertToGroupCurrency
@@ -51,6 +52,14 @@ sealed interface ExpenseFormError {
     /** The shares do not add up to what the server requires for this mode. */
     data class SplitTotal(val assigned: Long, val required: Long) : ExpenseFormError
 
+    /**
+     * The server takes no share below zero in any mode, which rules out
+     * splitting money received by amount.
+     */
+    data object NegativeShare : ExpenseFormError
+
+    data object Notes : ExpenseFormError
+
     data class Failed(val error: SpliitError) : ExpenseFormError
 
     /** Where the field sits on the form, top first: a set has no order. */
@@ -62,7 +71,9 @@ sealed interface ExpenseFormError {
 
             Title -> 2
 
-            NobodyPaidFor, is SplitTotal -> 3
+            NobodyPaidFor, is SplitTotal, NegativeShare -> 3
+
+            Notes -> 4
 
             // Belongs to no field; reported at the foot of the form.
             is Failed -> Int.MAX_VALUE
@@ -193,6 +204,10 @@ data class ExpenseFormUiState(
     fun participant(id: String): Participant? = participants.firstOrNull { it.id == id }
 
     val canSave: Boolean get() = !isSaving && !isLoading
+
+    /** Either amount past what the server takes; which one decides the message. */
+    val isOverLimit: Boolean
+        get() = (enteredAmount ?: 0L) > ExpenseLimits.MAX_AMOUNT || amount > ExpenseLimits.MAX_AMOUNT
 
     /**
      * The topmost field that is wrong, or null. [Failed][ExpenseFormError.Failed]
@@ -538,7 +553,8 @@ class ExpenseFormViewModel(
         }
     }
 
-    fun onNotesChange(notes: String) = _state.update { it.copy(notes = notes) }
+    fun onNotesChange(notes: String) =
+        _state.update { it.copy(notes = notes, errors = it.errors - ExpenseFormError.Notes) }
 
     fun onNotesToggle() = _state.update { it.copy(showNotes = !it.showNotes) }
 
@@ -632,10 +648,10 @@ class ExpenseFormViewModel(
         val errors = mutableSetOf<ExpenseFormError>()
 
         val title = current.title.trim()
-        if (title.isEmpty()) errors += ExpenseFormError.Title
+        if (title.length !in ExpenseLimits.TITLE_LENGTH) errors += ExpenseFormError.Title
 
         val entered = current.enteredAmount
-        if (entered == null || entered == 0L) errors += ExpenseFormError.Amount
+        if (entered == null || entered == 0L || current.isOverLimit) errors += ExpenseFormError.Amount
 
         // A rate is only a rule when there is something to convert.
         val rate = current.conversionRate
@@ -646,6 +662,8 @@ class ExpenseFormViewModel(
 
         if (current.paidFor.isEmpty()) {
             errors += ExpenseFormError.NobodyPaidFor
+        } else if (current.splitMode != SplitMode.EVENLY && current.paidFor.values.any { it < 0 }) {
+            errors += ExpenseFormError.NegativeShare
         } else if (amount != null && amount != 0L) {
             // The server enforces these sums, so they are checked here where
             // the numbers can be pointed at, and only against an amount there
@@ -657,6 +675,8 @@ class ExpenseFormViewModel(
                 errors += ExpenseFormError.SplitTotal(assigned, required)
             }
         }
+
+        if (current.notes.trim().length > ExpenseLimits.NOTES_MAX_LENGTH) errors += ExpenseFormError.Notes
 
         if (errors.isNotEmpty()) {
             _state.update {

@@ -309,6 +309,21 @@
     <string name="expense_detail_reimbursement_note">Les remboursements déplacent de l’argent entre deux personnes. Ils ne comptent ni dans le total du groupe ni dans les statistiques.</string>
     <string name="expense_not_found">Cette dépense n’existe plus.</string>
     <string name="expense_error_title">Donnez un titre à la dépense.</string>
+    <plurals name="expense_error_title_short">
+        <item quantity="one">Un titre doit faire au moins %1$d caractère.</item>
+        <item quantity="other">Un titre doit faire au moins %1$d caractères.</item>
+    </plurals>
+    <plurals name="expense_error_title_long">
+        <item quantity="one">Limitez le titre à %1$d caractère.</item>
+        <item quantity="other">Limitez le titre à %1$d caractères.</item>
+    </plurals>
+    <string name="expense_error_amount_large">Spliit accepte au plus %1$s par dépense.</string>
+    <string name="expense_error_negative_share">Chaque part doit être supérieure à zéro.</string>
+    <string name="expense_error_income_by_amount">Un montant reçu ne peut pas être réparti par montant. Répartissez-le à parts égales, par parts ou par pourcentage.</string>
+    <plurals name="expense_error_notes_long">
+        <item quantity="one">Limitez la note à %1$d caractère.</item>
+        <item quantity="other">Limitez la note à %1$d caractères.</item>
+    </plurals>
     <string name="expense_error_amount">Saisissez un montant.</string>
     <string name="expense_error_nobody">Choisissez au moins une personne avec qui la partager.</string>
     <string name="expense_error_rate">Indiquez le taux de change de cette dépense.</string>

@@ -307,6 +307,21 @@
     <string name="expense_detail_reimbursement_note">Reimbursements move money between two people. They are left out of the group total and of the stats.</string>
     <string name="expense_not_found">This expense is not there any more.</string>
     <string name="expense_error_title">Give the expense a title.</string>
+    <plurals name="expense_error_title_short">
+        <item quantity="one">A title needs at least %1$d character.</item>
+        <item quantity="other">A title needs at least %1$d characters.</item>
+    </plurals>
+    <plurals name="expense_error_title_long">
+        <item quantity="one">Keep the title to %1$d character.</item>
+        <item quantity="other">Keep the title to %1$d characters.</item>
+    </plurals>
+    <string name="expense_error_amount_large">Spliit takes at most %1$s for one expense.</string>
+    <string name="expense_error_negative_share">Every share has to be more than zero.</string>
+    <string name="expense_error_income_by_amount">Money received cannot be split by amount. Split it evenly, by shares or by percentage.</string>
+    <plurals name="expense_error_notes_long">
+        <item quantity="one">Keep the note to %1$d character.</item>
+        <item quantity="other">Keep the note to %1$d characters.</item>
+    </plurals>
     <string name="expense_error_amount">Enter an amount.</string>
     <string name="expense_error_nobody">Choose at least one person to split this with.</string>
     <string name="expense_error_rate">Set the exchange rate for this expense.</string>
