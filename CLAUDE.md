@@ -366,7 +366,7 @@ form pre-filled, as upstream's reimbursement link does, because `create` is not
 idempotent and nothing undoes it.
 
 - The title comes from `strings.xml`, not the two names, so both clients read the
-  same.
+  same. The category is **1, "Payment"**, as the web and iOS file it.
 - `ReimbursementPrefill` rides the route as optional query arguments and is
   **checked against the group**; one naming somebody removed falls back to a blank
   form. Its title resolves in the `NavHost`, since a ViewModel has no `Context`.

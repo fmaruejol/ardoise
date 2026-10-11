@@ -820,6 +820,8 @@ class ExpenseFormViewModelTest {
         assertEquals("p1", input.paidById)
         assertEquals(listOf("p2"), input.paidFor.map { it.participantId })
         assertTrue(input.isReimbursement)
+        // Spliit's "Payment" category.
+        assertEquals(1, input.categoryId)
     }
 
     @Test

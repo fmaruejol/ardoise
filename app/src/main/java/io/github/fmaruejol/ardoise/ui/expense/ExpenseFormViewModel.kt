@@ -326,6 +326,8 @@ class ExpenseFormViewModel(
             splitMode = SplitMode.EVENLY,
             paidFor = mapOf(prefill.payeeId to 1L),
             isReimbursement = true,
+            // Spliit's "Payment" category.
+            categoryId = 1,
         )
     }
 
