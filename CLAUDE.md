@@ -78,7 +78,7 @@ When adding a procedure, read it *and* the Prisma `select` behind it in
 `expenses.list` nests the participant in each `paidFor` row, `expenses.get`
 returns a bare id.
 
-Six facts that have already bitten:
+Seven facts that have already bitten:
 
 - `Group.currency` is a **display symbol** (free text). `Group.currencyCode` is
   the ISO code and is **nullable** on older groups. Only the code implies scale.
@@ -89,6 +89,9 @@ Six facts that have already bitten:
   expense. Never retry one automatically.
 - `paidFor` has no `ORDER BY`. Anything showing participants in an order imposes
   it, normally the group's.
+- `expenses.list` and `activities.list` cap `limit` at **100**; a larger one is a
+  `BAD_REQUEST`. `SpliitApiClient` fetches past it as consecutive cursor requests,
+  so callers still ask for "the newest N".
 - An expense update **replaces its documents** — upstream deletes every one whose
   id is absent from the payload.
 

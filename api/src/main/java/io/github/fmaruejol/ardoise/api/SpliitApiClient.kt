@@ -34,6 +34,7 @@ import io.github.fmaruejol.ardoise.core.model.GroupDetails
 import io.github.fmaruejol.ardoise.core.model.GroupSummary
 import io.github.fmaruejol.ardoise.core.model.UserGroupBalance
 import io.github.fmaruejol.ardoise.core.result.SpliitResult
+import io.github.fmaruejol.ardoise.core.result.map
 import io.github.fmaruejol.ardoise.core.result.mapCatching
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.builtins.serializer
@@ -99,6 +100,18 @@ class SpliitApiClient(private val client: TrpcClient) : SpliitApi {
     // --- expenses ----------------------------------------------------------
 
     override suspend fun listExpenses(
+        groupId: String,
+        cursor: Int?,
+        limit: Int?,
+        filter: String?,
+    ): SpliitResult<ExpensePage> {
+        if (limit == null || limit <= MAX_PAGE) return expensePage(groupId, cursor, limit, filter)
+        return inPages(cursor ?: 0, limit, { it.id }) { at, size ->
+            expensePage(groupId, at, size, filter).map { it.expenses to it.hasMore }
+        }.map { (expenses, hasMore) -> ExpensePage(expenses, hasMore) }
+    }
+
+    private suspend fun expensePage(
         groupId: String,
         cursor: Int?,
         limit: Int?,
@@ -194,7 +207,14 @@ class SpliitApiClient(private val client: TrpcClient) : SpliitApi {
         groupId: String,
         cursor: Int,
         limit: Int,
-    ): SpliitResult<ActivityPage> =
+    ): SpliitResult<ActivityPage> {
+        if (limit <= MAX_PAGE) return activityPage(groupId, cursor, limit)
+        return inPages(cursor, limit, { it.id }) { at, size ->
+            activityPage(groupId, at, size).map { it.activities to it.hasMore }
+        }.map { (activities, hasMore) -> ActivityPage(activities, hasMore) }
+    }
+
+    private suspend fun activityPage(groupId: String, cursor: Int, limit: Int): SpliitResult<ActivityPage> =
         client.query(
             procedure = Procedures.ACTIVITIES_LIST,
             deserializer = ListActivitiesResponse.serializer(),
@@ -214,6 +234,43 @@ class SpliitApiClient(private val client: TrpcClient) : SpliitApi {
 
     private fun <T> encode(serializer: SerializationStrategy<T>, value: T): JsonElement =
         json.encodeToJsonElement(serializer, value)
+
+    /**
+     * [limit] rows from [cursor] as consecutive requests of at most
+     * [MAX_PAGE], stopping early when the server has no more. The cursor is
+     * an offset, so a row added between two requests pushes the last one of
+     * the first into the second; deduplicating keeps it from counting twice.
+     */
+    private suspend fun <T> inPages(
+        cursor: Int,
+        limit: Int,
+        id: (T) -> String,
+        fetch: suspend (cursor: Int, limit: Int) -> SpliitResult<Pair<List<T>, Boolean>>,
+    ): SpliitResult<Pair<List<T>, Boolean>> {
+        val rows = mutableListOf<T>()
+        var hasMore = true
+        var at = cursor
+        while (hasMore && at - cursor < limit) {
+            val size = minOf(MAX_PAGE, cursor + limit - at)
+            when (val page = fetch(at, size)) {
+                is SpliitResult.Failure -> {
+                    return page
+                }
+
+                is SpliitResult.Success -> {
+                    rows += page.value.first
+                    hasMore = page.value.second
+                }
+            }
+            at += size
+        }
+        return SpliitResult.Success(rows.distinctBy(id) to hasMore)
+    }
+
+    private companion object {
+        /** Upstream's zod schema for both list procedures: `limit` is at most 100. */
+        const val MAX_PAGE = 100
+    }
 }
 
 /**

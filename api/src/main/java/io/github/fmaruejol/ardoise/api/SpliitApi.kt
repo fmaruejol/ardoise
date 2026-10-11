@@ -50,7 +50,8 @@ interface SpliitApi {
 
     /**
      * One page of expenses, newest first. [cursor] is a count of rows to skip;
-     * [filter] is a case-insensitive substring of the title.
+     * [filter] is a case-insensitive substring of the title. The server caps a
+     * request at 100 rows; a larger [limit] is fetched as several.
      */
     suspend fun listExpenses(
         groupId: String,
@@ -101,6 +102,7 @@ interface SpliitApi {
 
     // --- activities --------------------------------------------------------
 
+    /** Newest first. Like [listExpenses], a [limit] over 100 is several requests. */
     suspend fun listActivities(
         groupId: String,
         cursor: Int = 0,

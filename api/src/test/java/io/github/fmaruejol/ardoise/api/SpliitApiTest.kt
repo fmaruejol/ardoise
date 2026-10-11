@@ -198,6 +198,60 @@ class SpliitApiTest {
         assertEquals(SpliitResult.Success(Unit), result)
     }
 
+    // --- paging past the server's cap ---------------------------------------
+
+    @Test
+    fun `a limit over 100 is split into requests the server accepts`() = runTest {
+        server.enqueue(expensePage("e1", hasMore = true))
+        server.enqueue(expensePage("e2", hasMore = true))
+        server.enqueue(expensePage("e3", hasMore = true))
+
+        val page = (api.listExpenses("g1", cursor = 0, limit = 250) as SpliitResult.Success).value
+
+        assertEquals(listOf(0 to 100, 100 to 100, 200 to 50), List(3) { server.takeRequest().cursorAndLimit() })
+        assertEquals(listOf("e1", "e2", "e3"), page.expenses.map { it.id })
+        assertTrue(page.hasMore)
+    }
+
+    @Test
+    fun `paging stops at the last page the server has`() = runTest {
+        server.enqueue(expensePage("e1", hasMore = false))
+
+        val page = (api.listExpenses("g1", cursor = 0, limit = 1000) as SpliitResult.Success).value
+
+        assertEquals(1, server.requestCount)
+        assertEquals(false, page.hasMore)
+    }
+
+    @Test
+    fun `a page that fails fails the whole list`() = runTest {
+        server.enqueue(expensePage("e1", hasMore = true))
+        server.enqueue(MockResponse().setResponseCode(502).setBody("<html>Bad Gateway</html>"))
+
+        val result = api.listExpenses("g1", cursor = 0, limit = 200)
+
+        assertTrue(result is SpliitResult.Failure)
+    }
+
+    @Test
+    fun `a row pushed into the next page by a new expense is counted once`() = runTest {
+        server.enqueue(expensePage("e1", hasMore = true))
+        server.enqueue(expensePage("e1", hasMore = false))
+
+        val page = (api.listExpenses("g1", cursor = 0, limit = 200) as SpliitResult.Success).value
+
+        assertEquals(listOf("e1"), page.expenses.map { it.id })
+    }
+
+    @Test
+    fun `the activity log pages past the cap too`() = runTest {
+        repeat(2) { server.enqueue(ok("""{"result":{"data":{"json":{"activities":[],"hasMore":true}}}}""")) }
+
+        api.listActivities("g1", cursor = 0, limit = 120)
+
+        assertEquals(listOf(0 to 100, 100 to 20), List(2) { server.takeRequest().cursorAndLimit() })
+    }
+
     // --- errors ------------------------------------------------------------
 
     @Test
@@ -261,6 +315,16 @@ class SpliitApiTest {
     }
 
     private fun ok(body: String) = MockResponse().setResponseCode(200).setBody(body)
+
+    private fun expensePage(id: String, hasMore: Boolean) = ok(
+        EXPENSES_RESPONSE.replace("\"e1\"", "\"$id\"").replace("\"hasMore\":true", "\"hasMore\":$hasMore"),
+    )
+
+    private fun RecordedRequest.cursorAndLimit(): Pair<Int, Int> {
+        val input = Json.parseToJsonElement(inputParameter()!!) as JsonObject
+        val json = input["json"] as JsonObject
+        return json["cursor"].toString().toInt() to json["limit"].toString().toInt()
+    }
 
     private fun RecordedRequest.inputParameter(): String? =
         requestUrl?.queryParameter("input")?.let { URLDecoder.decode(it, "UTF-8") }
