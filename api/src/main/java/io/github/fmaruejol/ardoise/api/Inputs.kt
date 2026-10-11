@@ -61,6 +61,10 @@ data class ExpenseInput(
     val splitMode: SplitMode,
     val categoryId: Int = 0,
     val isReimbursement: Boolean = false,
+    /**
+     * Null is left out of the request, which an update reads as "unchanged";
+     * `""` is what clears a note. The schema refuses a JSON null.
+     */
     val notes: String? = null,
     val recurrenceRule: RecurrenceRule = RecurrenceRule.NONE,
     val originalAmount: Long? = null,

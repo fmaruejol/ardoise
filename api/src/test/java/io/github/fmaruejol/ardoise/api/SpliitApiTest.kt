@@ -123,6 +123,29 @@ class SpliitApiTest {
     }
 
     @Test
+    fun `an empty note is sent, and a null one is left out`() = runTest {
+        repeat(2) { server.enqueue(ok("""{"result":{"data":{"json":{"expenseId":"e1"}}}}""")) }
+        val expense = ExpenseInput(
+            title = "Dinner",
+            amount = 4_250,
+            expenseDate = LocalDate.of(2026, 9, 4),
+            paidById = "p1",
+            paidFor = listOf(PaidFor("p1", 100)),
+            splitMode = SplitMode.EVENLY,
+        )
+
+        api.updateExpense("g1", "e1", expense.copy(notes = ""))
+        api.updateExpense("g1", "e1", expense.copy(notes = null))
+
+        // On an update a missing field is "unchanged", so only "" clears a note.
+        val values = List(2) {
+            val body = Json.parseToJsonElement(server.takeRequest().body.readUtf8()) as JsonObject
+            ((body["json"] as JsonObject)["expenseFormValues"] as JsonObject)["notes"]?.toString()
+        }
+        assertEquals(listOf("\"\"", null), values)
+    }
+
+    @Test
     fun `an incoming date is decoded and its annotations ignored`() = runTest {
         server.enqueue(ok(GROUP_RESPONSE))
 

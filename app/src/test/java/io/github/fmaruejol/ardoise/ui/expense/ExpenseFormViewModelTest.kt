@@ -524,6 +524,21 @@ class ExpenseFormViewModelTest {
         assertEquals(RecurrenceRule.NONE, input.recurrenceRule)
     }
 
+    @Test
+    fun `clearing the note on an edit sends an empty one`() = runTest(dispatcher) {
+        api.getExpenseResult = SpliitResult.Success(existing().copy(notes = "Booked by Ana"))
+        val viewModel = viewModel("e1")
+        advanceUntilIdle()
+
+        viewModel.onNotesChange("")
+        viewModel.onSave()
+        advanceUntilIdle()
+
+        // A null is left out of the request, and the server keeps what it had.
+        val input = api.callsTo("updateExpense").single().arguments[2] as ExpenseInput
+        assertEquals("", input.notes)
+    }
+
     // --- reimbursements ----------------------------------------------------
 
     @Test

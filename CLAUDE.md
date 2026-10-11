@@ -367,6 +367,10 @@ update of that expense rather than a second one.
 The form sends no `documents`; `ExpenseRepository.update` reads the set back and
 carries it over, or an edit here would delete an attachment added on the web.
 
+**An empty note is sent as `""`, never null.** A null field is left out of the
+request, an update reads a missing field as "unchanged", and the schema refuses a
+JSON null — so `""` is the only way to clear a note.
+
 ## Balances and settling up
 
 Balances come from `groups.balances.list` rather than local arithmetic, because

@@ -711,7 +711,7 @@ class ExpenseFormViewModel(
                 conversionRate = rate?.asStoredRate().takeIf { current.isConverted },
                 splitMode = current.splitMode,
                 categoryId = current.categoryId,
-                notes = current.notes.trim().takeIf { it.isNotEmpty() },
+                notes = current.notes.trim(),
                 recurrenceRule = current.recurrenceRule,
                 isReimbursement = current.isReimbursement,
             )
