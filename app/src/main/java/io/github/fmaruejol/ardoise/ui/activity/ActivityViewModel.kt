@@ -34,6 +34,7 @@ data class ActivityRow(
     val byYou: Boolean,
     /** The expense's title, when the activity is about one. */
     val what: String?,
+    /** The expense to open, or null when there is none or it has been deleted. */
     val expenseId: String?,
 )
 
@@ -158,7 +159,8 @@ class ActivityViewModel(
             // The payload is the expense title; a blank one is treated as
             // absent so the UI can say "an expense".
             what = data?.takeIf { it.isNotBlank() },
-            expenseId = expenseId,
+            // Gone since: nothing to open.
+            expenseId = expenseId.takeIf { expenseExists },
         )
 
     private companion object {

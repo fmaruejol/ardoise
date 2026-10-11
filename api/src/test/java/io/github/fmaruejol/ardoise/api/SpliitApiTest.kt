@@ -348,6 +348,25 @@ class SpliitApiTest {
     }
 
     @Test
+    fun `an activity says whether its expense still exists`() = runTest {
+        server.enqueue(
+            ok(
+                """{"result":{"data":{"json":{"activities":[""" +
+                    """{"id":"a1","groupId":"g1","time":"2026-10-11T10:00:00.000Z","activityType":"CREATE_EXPENSE",""" +
+                    """"expenseId":"e1","data":"Taxi","expense":{"id":"e1","title":"Taxi"}},""" +
+                    """{"id":"a2","groupId":"g1","time":"2026-10-11T09:00:00.000Z","activityType":"CREATE_EXPENSE",""" +
+                    """"expenseId":"e2","data":"Gone","expense":null}],"hasMore":false},""" +
+                    """"meta":{"values":{"activities.0.time":["Date"],"activities.1.time":["Date"],""" +
+                    """"activities.1.expense":["undefined"]}}}}}""",
+            ),
+        )
+
+        val activities = (api.listActivities("g1") as SpliitResult.Success).value.activities
+
+        assertEquals(listOf(true, false), activities.map { it.expenseExists })
+    }
+
+    @Test
     fun `the activity log pages past the cap too`() = runTest {
         repeat(2) { server.enqueue(ok("""{"result":{"data":{"json":{"activities":[],"hasMore":true}}}}""")) }
 

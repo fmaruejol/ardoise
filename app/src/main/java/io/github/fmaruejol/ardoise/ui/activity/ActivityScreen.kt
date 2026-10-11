@@ -199,8 +199,8 @@ private fun ActivityLine(row: ActivityRow, onExpenseClick: (String) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            // Only expense activities lead anywhere, and a deleted one would
-            // lead to a screen reporting the deletion.
+            // Only an expense that still exists leads anywhere; one deleted
+            // would lead to a screen reporting the deletion.
             .let { modifier ->
                 val expenseId = row.expenseId
                 if (expenseId != null && row.type != ActivityType.DELETE_EXPENSE) {

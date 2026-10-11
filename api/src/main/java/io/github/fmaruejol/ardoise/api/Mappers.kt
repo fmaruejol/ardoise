@@ -159,6 +159,7 @@ internal fun ActivityDto.toDomain() = Activity(
     participantId = participantId,
     expenseId = expenseId,
     data = data,
+    expenseExists = expense != null && expense !is JsonNull,
 )
 
 internal fun StatsOverviewResponse.toDomain() = GroupStats(

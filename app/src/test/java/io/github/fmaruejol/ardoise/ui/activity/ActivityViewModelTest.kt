@@ -78,6 +78,7 @@ class ActivityViewModelTest {
         by: String? = "p2",
         type: ActivityType = ActivityType.CREATE_EXPENSE,
         data: String? = "Dinner",
+        expenseExists: Boolean = true,
     ) = Activity(
         id = id,
         groupId = "g1",
@@ -86,7 +87,21 @@ class ActivityViewModelTest {
         participantId = by,
         expenseId = "e1",
         data = data,
+        expenseExists = expenseExists,
     )
+
+    @Test
+    fun `an entry about an expense deleted since opens nothing`() = runTest(dispatcher) {
+        page(
+            activity("a1", "2026-09-12T09:00:00Z"),
+            activity("a2", "2026-09-11T09:00:00Z", expenseExists = false),
+        )
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        val rows = viewModel.state.value.days.flatMap { it.rows }
+        assertEquals(listOf("e1", null), rows.map { it.expenseId })
+    }
 
     @Test
     fun `cuts days by the device's clock, not the server's`() = runTest(dispatcher) {

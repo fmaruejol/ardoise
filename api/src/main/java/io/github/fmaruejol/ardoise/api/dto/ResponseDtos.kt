@@ -3,6 +3,7 @@ package io.github.fmaruejol.ardoise.api.dto
 import io.github.fmaruejol.ardoise.api.superjson.InstantSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 import java.time.Instant
 
 /**
@@ -201,6 +202,8 @@ internal data class ActivityDto(
     val participantId: String? = null,
     val expenseId: String? = null,
     val data: String? = null,
+    /** The expense as it is now; null or absent once it has been deleted. Only its presence is read. */
+    val expense: JsonElement? = null,
 )
 
 @Serializable

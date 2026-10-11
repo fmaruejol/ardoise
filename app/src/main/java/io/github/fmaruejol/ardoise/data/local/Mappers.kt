@@ -246,6 +246,7 @@ internal fun Activity.toEntity(position: Int) = ActivityEntity(
     participantId = participantId,
     expenseId = expenseId,
     data = data,
+    expenseExists = expenseExists,
     position = position,
 )
 
@@ -257,6 +258,7 @@ internal fun ActivityEntity.toActivity() = Activity(
     participantId = participantId,
     expenseId = expenseId,
     data = data,
+    expenseExists = expenseExists,
 )
 
 /**

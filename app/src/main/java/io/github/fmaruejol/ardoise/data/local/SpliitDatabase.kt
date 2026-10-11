@@ -27,7 +27,7 @@ import androidx.room.RoomDatabase
         StatsCategoryEntity::class,
         StatsParticipantEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class SpliitDatabase : RoomDatabase() {

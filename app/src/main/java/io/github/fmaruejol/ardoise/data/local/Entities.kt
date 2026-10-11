@@ -151,6 +151,7 @@ data class ActivityEntity(
     val participantId: String?,
     val expenseId: String?,
     val data: String?,
+    val expenseExists: Boolean,
     val position: Int,
 )
 

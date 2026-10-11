@@ -26,6 +26,8 @@ data class Activity(
     val expenseId: String?,
     /** Free-form payload; for expense activities this is the expense title. */
     val data: String?,
+    /** Whether [expenseId] still names an expense, or one deleted since. */
+    val expenseExists: Boolean,
 )
 
 data class ActivityPage(
