@@ -702,8 +702,7 @@ class ExpenseFormViewModel(
                 expenseDate = current.date,
                 paidById = current.paidById,
                 paidFor = current.paidFor.map { (id, share) ->
-                    // EVENLY ignores the share, but the field is not optional.
-                    PaidFor(id, if (current.splitMode == SplitMode.EVENLY) 1L else share)
+                    PaidFor(id, if (current.splitMode == SplitMode.EVENLY) SplitMode.EVENLY_SHARE else share)
                 },
                 // Kept beside the converted amount as upstream keeps them.
                 originalAmount = entered.takeIf { current.isConverted },

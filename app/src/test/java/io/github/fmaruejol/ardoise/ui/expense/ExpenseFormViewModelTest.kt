@@ -929,6 +929,20 @@ class ExpenseFormViewModelTest {
         assertEquals(setOf(ExpenseFormError.Amount), viewModel.state.value.errors)
     }
 
+    @Test
+    fun `an even split is sent as one share each at upstream's scale`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onTitleChange("Dinner")
+        viewModel.onAmountChange("30")
+
+        viewModel.onSave()
+        advanceUntilIdle()
+
+        // 1 would read as 0.01 of a share once the expense is split by shares.
+        assertEquals(listOf(100L, 100L, 100L), sentInput().paidFor.map { it.shares })
+    }
+
     // --- what the server refuses, refused here first ------------------------
 
     private fun savedWith(title: String = "Dinner", amount: String = "30", notes: String = ""): ExpenseFormViewModel {

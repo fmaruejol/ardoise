@@ -32,6 +32,13 @@ enum class SplitMode {
     }
 
     companion object {
+        /**
+         * What an `EVENLY` row is sent as. The arithmetic ignores it, but it is
+         * upstream's one share at `BY_SHARES` scale, so an expense switched to
+         * split by shares elsewhere reads back as one share each, not 0.01.
+         */
+        const val EVENLY_SHARE: Long = 100L
+
         /** The server's rule: `BY_PERCENTAGE` shares sum to 10000. */
         const val PERCENT_TOTAL: Long = 10_000
 
@@ -65,7 +72,8 @@ data class Category(
  *
  * **[shares] is not an amount**: a count scaled by 100 for `BY_SHARES`, a
  * percentage scaled by 100 for `BY_PERCENTAGE`, minor units for `BY_AMOUNT`,
- * ignored for `EVENLY`. Write against [SplitMode.shareScale] and
+ * ignored for `EVENLY` (and sent as [SplitMode.EVENLY_SHARE]). Write against
+ * [SplitMode.shareScale] and
  * [SplitMode.requiredTotal] rather than re-deriving it.
  */
 data class PaidFor(
