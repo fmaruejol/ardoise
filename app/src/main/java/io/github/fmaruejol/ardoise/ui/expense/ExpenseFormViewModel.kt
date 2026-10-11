@@ -507,9 +507,13 @@ class ExpenseFormViewModel(
         } else {
             GroupCurrency.of(code, code)
         }
+        // Back in the group's currency, the number in the field becomes what the
+        // group was charged; "100 USD" would otherwise turn into "100 EUR".
+        val backToGroup = chosen.code == current.currency.code && current.isConverted && current.amount != 0L
         _state.update {
             it.copy(
                 entryCurrency = chosen,
+                amountText = if (backToGroup) it.currency.formatPlain(it.amount) else it.amountText,
                 pickingEntryCurrency = false,
                 storedAmount = null,
                 conversionRateText = if (chosen.code == it.currency.code) "" else it.conversionRateText,

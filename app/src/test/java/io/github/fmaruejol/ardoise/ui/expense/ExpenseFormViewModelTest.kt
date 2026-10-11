@@ -566,6 +566,8 @@ class ExpenseFormViewModelTest {
             val input = api.callsTo("updateExpense").single().arguments[2] as ExpenseInput
             assertNull(input.originalCurrency)
             assertNull(input.conversionRate)
+            // What the group was charged, not the dollars relabelled as euros.
+            assertEquals(892L, input.amount)
         }
 
     private fun convertedOnTheWeb() = existing().copy(
