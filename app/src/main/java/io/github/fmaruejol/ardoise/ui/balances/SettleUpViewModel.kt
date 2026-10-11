@@ -59,12 +59,12 @@ data class SettleUpUiState(
 /**
  * The payments that would clear the group.
  *
- * The suggestions are the server's, so the app never proposes a payment the
- * web client would not.
+ * The suggestions are the server's, never worked out here, so a payment
+ * proposed here is the one the server proposes.
  *
- * **Nothing here writes.** "Mark as paid" opens the expense form filled in, as
- * the web client's reimbursement link does: settling up creates a
- * reimbursement expense, and `groups.expenses.create` cannot be taken back.
+ * **Nothing here writes.** "Mark as paid" opens the expense form filled in:
+ * settling up creates a reimbursement expense, and `groups.expenses.create`
+ * cannot be taken back.
  */
 class SettleUpViewModel(
     private val groupId: String,

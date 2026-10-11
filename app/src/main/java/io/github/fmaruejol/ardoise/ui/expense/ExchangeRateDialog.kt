@@ -31,8 +31,8 @@ import java.time.LocalDate
 
 /**
  * The exchange rate for one expense. **"1 [original] = rate [group]"**,
- * upstream's direction and the one its rate source is queried in, so this is
- * the number the web client shows for the same expense.
+ * upstream's direction, the stored one, and the one its rate source is
+ * queried in.
  */
 @Composable
 internal fun ExchangeRateDialog(

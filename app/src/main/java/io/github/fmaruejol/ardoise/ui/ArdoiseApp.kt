@@ -243,7 +243,8 @@ fun ArdoiseApp(
                     groupId = groupId,
                     onClose = { navController.popBackStack() },
                     // Settling up writes nothing itself: it fills the form in
-                    // and the user saves it, as the web client does.
+                    // and the user saves it, since a created expense cannot be
+                    // taken back.
                     onMarkPaid = { transfer ->
                         navController.navigate(
                             Routes.settleExpense(

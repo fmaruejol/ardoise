@@ -54,7 +54,7 @@ class MoneyFormatTest {
         assertEquals(2, GroupCurrency.decimalDigitsFor(null))
         assertEquals(2, GroupCurrency.decimalDigitsFor(""))
         assertEquals(2, GroupCurrency.decimalDigitsFor("   "))
-        // A code a self-hosted instance might store. The web renders unknown
+        // A code a self-hosted instance might store. Upstream renders unknown
         // codes at two decimals, so this has to as well.
         assertEquals(2, GroupCurrency.decimalDigitsFor("XYZ"))
     }

@@ -67,7 +67,7 @@ data class BalancesUiState(
  * adding the expenses up here, because `:core`'s `settle` needs every
  * expense in hand and one round trip beats fetching them all.
  *
- * *Public* balances, so the app and the web client always agree.
+ * *Public* balances, exactly as the server reports them.
  */
 class BalancesViewModel(
     private val groupId: String,

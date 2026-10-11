@@ -210,9 +210,8 @@
     <string name="settle_partial">partial, %1$s left over</string>
     <string name="settle_mark_paid">Mark as paid</string>
     <!--
-      What a settled-up payment is called in the feed. Upstream titles it from
-      its own translations rather than from the two names, so the web and
-      Android clients read the same.
+      What a settled-up payment is called in the feed: a translated word rather
+      than the two names, as upstream titles it.
     -->
     <string name="expense_reimbursement_title">Reimbursement</string>
 
@@ -329,8 +328,7 @@
     <string name="expense_error_split_percent">The percentages add up to %1$s, not 100%%.</string>
 
     <!-- An expense paid in another currency. The rate reads
-         "1 original = rate group", which is what the server stores and what
-         the web client shows. -->
+         "1 original = rate group", which is what the server stores. -->
     <string name="expense_converted">= %1$s · 1 %2$s = %3$s %4$s</string>
     <string name="expense_rate_needed">Set an exchange rate</string>
     <string name="rate_title">Exchange rate</string>

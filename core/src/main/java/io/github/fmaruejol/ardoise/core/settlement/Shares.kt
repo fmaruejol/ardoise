@@ -121,7 +121,7 @@ private class Remainder(val index: Int, val remainder: Long)
 
 /**
  * A small deterministic string hash (FNV-1a, 32 bit), ported from upstream so
- * both clients rotate the leftover minor unit to the same participant.
+ * the leftover minor unit goes to the participant the server gives it to.
  *
  * Seeding the rotation with the expense id keeps the split a pure function of
  * the expense, no persisted cursor, no randomness, while still moving the

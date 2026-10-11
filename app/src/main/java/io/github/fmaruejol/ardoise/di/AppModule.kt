@@ -85,7 +85,7 @@ val networkModule: Module = module {
     // A client for one address, so a server can be checked before it is saved.
     single<SpliitApiFactory> { DefaultSpliitApiFactory(httpClient = get()) }
 
-    // Not Spliit's: the rate source the web client uses. See ExchangeRates.
+    // Not Spliit's API. See ExchangeRates.
     single<ExchangeRates> { FrankfurterExchangeRates(client = get()) }
 }
 

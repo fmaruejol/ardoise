@@ -47,9 +47,8 @@ class ExchangeRatesTest {
             rates.rate(LocalDate.parse("2026-09-11"), base = "BRL", target = "EUR")
 
             val request = server.takeRequest()
-            // The date is in the path and the base is the original currency,
-            // which is upstream's own query, so the two clients get the same
-            // number.
+            // The date is in the path and the base is the original currency:
+            // upstream's own query, so the rate is the one Spliit would store.
             assertTrue(request.path!!.startsWith("/v1/2026-09-11"))
             assertTrue(request.path!!.contains("base=BRL"))
             assertTrue(request.path!!.contains("symbols=EUR"))

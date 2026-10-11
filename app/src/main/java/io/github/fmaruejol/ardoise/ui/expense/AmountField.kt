@@ -183,8 +183,8 @@ internal fun AmountField(
 
 /**
  * "= €96.43 · 1 BRL = 0.17857 EUR", and the way into changing the rate.
- * **"1 original = rate group"**, upstream's direction and the stored one, so
- * the web client shows the same number rather than its reciprocal.
+ * **"1 original = rate group"**, upstream's direction and the stored one: the
+ * reciprocal would read as a different rate for the same expense.
  */
 @Composable
 private fun ConversionLine(state: ExpenseFormUiState, onClick: () -> Unit) {

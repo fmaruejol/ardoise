@@ -18,9 +18,8 @@ import io.github.fmaruejol.ardoise.core.model.Category
 import io.github.fmaruejol.ardoise.ui.theme.groupTiles
 
 /**
- * An icon for a category, keyed on `grouping/name` exactly as the web client
- * does, so the same expense is recognisable in both. The glyphs are the
- * Material Symbols nearest its Lucide ones.
+ * An icon for a category, keyed on `grouping/name` as upstream keys its own.
+ * The glyphs are the Material Symbols nearest upstream's Lucide ones.
  *
  * **Distinct on purpose, including where upstream reuses one**: four icons for
  * four things is what makes a feed scannable. An unknown category falls back.

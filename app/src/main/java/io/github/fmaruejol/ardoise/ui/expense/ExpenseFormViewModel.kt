@@ -496,8 +496,8 @@ class ExpenseFormViewModel(
                 errors = it.errors - ExpenseFormError.Rate,
             )
         }
-        // Filled in unasked, as the web client does: the rate is what makes the
-        // amount mean anything. The dialog is where it is corrected.
+        // Filled in unasked: the rate is what makes the amount mean anything.
+        // The dialog is where it is corrected.
         if (chosen.code != current.currency.code) lookUpRate()
     }
 

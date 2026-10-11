@@ -8,7 +8,7 @@ import java.time.LocalDate
 
 /**
  * What the caller supplies to create or update a group. The server validates
- * with the web form's zod schema, name 2 to 50 characters, symbol 1 to 5,
+ * with upstream's `groupFormSchema`, name 2 to 50 characters, symbol 1 to 5,
  * code 3 or null, unique participant names, and refuses with `BAD_REQUEST`.
  */
 data class GroupInput(
@@ -68,6 +68,6 @@ data class ExpenseInput(
     /** Exact decimal text, e.g. `"1.0825"`. A string, so never a Double. */
     val conversionRate: String? = null,
     val documents: List<ExpenseDocument> = emptyList(),
-    /** For the *web* client's default split. No server-side effect, but required. */
+    /** No server-side effect, but the schema requires it. */
     val saveDefaultSplittingOptions: Boolean = false,
 )

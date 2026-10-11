@@ -17,7 +17,7 @@ class DefaultCurrencyTest {
 
     @Test
     fun `falls back where Spliit has no such currency`() {
-        // Argentina's peso is not in the web client's list, so opening the
+        // Argentina's peso is not in Spliit's currency list, so opening the
         // picker on it would show a code that is not one of its options.
         assertEquals(GroupCurrency.FALLBACK_CODE, GroupCurrency.defaultCodeFor(locale("es", "AR")))
     }

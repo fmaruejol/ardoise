@@ -11,8 +11,8 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 
 /**
  * Draws [text] as a QR code. The scanner is zxing-cpp, which reads and does not
- * write, so the encoder is the original ZXing. The symbology is the same, so
- * this and the web client's code are interchangeable.
+ * write, so the encoder is the original ZXing. Standard QR of the plain group
+ * URL, which is what Spliit encodes too.
  *
  * Returns null rather than throwing: a code that will not render is still a
  * group with a link to share.

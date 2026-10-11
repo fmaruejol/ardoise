@@ -90,7 +90,7 @@ class SuperJsonTest {
     }
 
     @Test
-    fun `sends an expense date as UTC midnight, matching the web client`() {
+    fun `sends an expense date as UTC midnight, which is how Spliit stores a date`() {
         val date = SuperJsonDate.ofDate(LocalDate.of(2026, 3, 1))
 
         assertEquals(Instant.parse("2026-03-01T00:00:00Z"), date.value)

@@ -15,11 +15,10 @@ import kotlin.coroutines.cancellation.CancellationException
 /**
  * What one currency was worth in another on a given day.
  *
- * **Not Spliit's API**: it is [Frankfurter](https://frankfurter.dev), which is
- * what upstream's `useCurrencyRate` queries. Two clients filling one field
- * from two sources would put two different rates on the same expense. It is
- * the only host the app talks to that is not the chosen instance, and it is
- * told nothing but a date and two currency codes.
+ * **Not Spliit's API**: it is [Frankfurter](https://frankfurter.dev), upstream's
+ * own rate source. A second source would put a different rate on the same
+ * expense. It is the only host the app talks to that is not the chosen
+ * instance, and it is told nothing but a date and two currency codes.
  */
 interface ExchangeRates {
     /**

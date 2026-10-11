@@ -97,9 +97,7 @@ class CategoryIconsTest {
     }
 
     @Test
-    fun `matches the web client where the web client is distinctive`() {
-        // A Spliit user moving between the two clients should recognise the
-        // same expense; these are the ones with an obvious glyph.
+    fun `a category with an unmistakable glyph upstream gets its nearest symbol`() {
         assertEquals(R.drawable.ic_restaurant, categoryIcon("Food and Drink", "Food and Drink"))
         assertEquals(R.drawable.ic_shopping_cart, categoryIcon("Food and Drink", "Groceries"))
         assertEquals(R.drawable.ic_home, categoryIcon("Home", "Home"))

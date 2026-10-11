@@ -212,10 +212,8 @@
     <string name="settle_partial">partiel, %1$s restant</string>
     <string name="settle_mark_paid">Marquer comme payé</string>
     <!--
-      Le nom d’un remboursement enregistré depuis l’écran de règlement. Comme
-      en amont, il vient
-      des traductions et non des deux noms, pour que le client web et celui-ci
-      disent la même chose.
+      Le nom d’un remboursement enregistré depuis l’écran de règlement : un mot
+      traduit et non les deux noms, comme en amont.
     -->
     <string name="expense_reimbursement_title">Remboursement</string>
 
@@ -331,8 +329,7 @@
     <string name="expense_error_split_percent">Les pourcentages totalisent %1$s, et non 100%%.</string>
 
     <!-- Une dépense payée dans une autre devise. Le taux se lit
-         « 1 devise d’origine = taux devise du groupe », comme sur le serveur
-         et dans le client web. -->
+         « 1 devise d’origine = taux devise du groupe », comme sur le serveur. -->
     <string name="expense_converted">= %1$s · 1 %2$s = %3$s %4$s</string>
     <string name="expense_rate_needed">Indiquer un taux de change</string>
     <string name="rate_title">Taux de change</string>

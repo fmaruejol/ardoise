@@ -7,7 +7,7 @@ import org.junit.Test
 
 /**
  * Ported from `src/lib/shares.test.ts` in `spliit-app/spliit`, expected values
- * included. A failure here means this client and the web app no longer agree.
+ * included. A failure here means this port no longer matches upstream.
  */
 class SharesTest {
     private fun expense(
