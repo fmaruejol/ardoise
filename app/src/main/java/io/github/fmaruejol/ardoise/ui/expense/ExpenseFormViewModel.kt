@@ -385,16 +385,21 @@ class ExpenseFormViewModel(
         // An expense entered in another currency comes back in that one: the
         // original is what its author typed.
         val entry = entryCurrencyFor(expense.originalCurrency, currency)
+        // The original amount and rate outlive a move back to the group's
+        // currency, which only clears the original currency.
+        val converted = entry.code != currency.code
         return copy(
             isLoading = false,
             activeParticipantId = me,
             isNew = false,
             currency = currency,
             entryCurrency = entry,
-            conversionRateText = rateText(expense.conversionRate),
+            conversionRateText = if (converted) rateText(expense.conversionRate) else "",
             participants = group.participants,
             title = expense.title,
-            amountText = entry.formatPlain(expense.originalAmount ?: expense.amount),
+            amountText = entry.formatPlain(
+                if (converted) expense.originalAmount ?: expense.amount else expense.amount,
+            ),
             date = expense.expenseDate,
             categoryId = expense.category?.id ?: 0,
             paidById = expense.paidById,

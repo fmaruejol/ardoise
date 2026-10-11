@@ -123,6 +123,32 @@ class SpliitApiTest {
     }
 
     @Test
+    fun `no original currency is sent as null, so an update clears the old one`() = runTest {
+        repeat(2) { server.enqueue(ok("""{"result":{"data":{"json":{"expenseId":"e1"}}}}""")) }
+        val expense = ExpenseInput(
+            title = "Dinner",
+            amount = 892,
+            expenseDate = LocalDate.of(2026, 10, 1),
+            paidById = "p1",
+            paidFor = listOf(PaidFor("p1", 100)),
+            splitMode = SplitMode.EVENLY,
+        )
+
+        api.updateExpense("g1", "e1", expense)
+        api.updateExpense(
+            "g1",
+            "e1",
+            expense.copy(originalAmount = 1000, originalCurrency = "USD", conversionRate = "0.89238"),
+        )
+
+        val sent = List(2) {
+            val body = Json.parseToJsonElement(server.takeRequest().body.readUtf8()) as JsonObject
+            ((body["json"] as JsonObject)["expenseFormValues"] as JsonObject)["originalCurrency"].toString()
+        }
+        assertEquals(listOf("null", "\"USD\""), sent)
+    }
+
+    @Test
     fun `an empty note is sent, and a null one is left out`() = runTest {
         repeat(2) { server.enqueue(ok("""{"result":{"data":{"json":{"expenseId":"e1"}}}}""")) }
         val expense = ExpenseInput(

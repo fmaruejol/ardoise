@@ -3,6 +3,7 @@ package io.github.fmaruejol.ardoise.api.dto
 import io.github.fmaruejol.ardoise.api.superjson.SuperJsonDate
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 
 /** Inputs, matching the zod schemas in `src/lib/schemas.ts` and the procedures. */
 
@@ -80,7 +81,14 @@ internal data class ExpenseFormValuesDto(
     val category: Int,
     val amount: Long,
     val originalAmount: Long? = null,
-    val originalCurrency: String? = null,
+    /**
+     * Always written, as JSON null when there is none. Left out, an update
+     * keeps the old one, and an expense moved back to the group's currency
+     * would go on saying it was paid in another. The amount and the rate
+     * cannot be cleared: the schema refuses null for both, and nothing reads
+     * them without this.
+     */
+    val originalCurrency: JsonElement = JsonNull,
     /** A JSON number carrying the exact decimal text, never a rounded Double. */
     val conversionRate: JsonElement? = null,
     val paidBy: String,

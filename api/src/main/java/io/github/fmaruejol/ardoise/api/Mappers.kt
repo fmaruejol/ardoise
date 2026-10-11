@@ -43,6 +43,8 @@ import io.github.fmaruejol.ardoise.core.stats.GroupStats
 import io.github.fmaruejol.ardoise.core.stats.ParticipantTotal
 import io.github.fmaruejol.ardoise.core.stats.StatsBreakdown
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonUnquotedLiteral
 import java.time.Instant
 import java.time.LocalDate
@@ -193,7 +195,7 @@ internal fun ExpenseInput.toDto() = ExpenseFormValuesDto(
     category = categoryId,
     amount = amount,
     originalAmount = originalAmount,
-    originalCurrency = originalCurrency,
+    originalCurrency = originalCurrency?.let(::JsonPrimitive) ?: JsonNull,
     // A bare JSON number, so the exact decimal text survives.
     conversionRate = conversionRate?.let { JsonUnquotedLiteral(it) },
     paidBy = paidById,

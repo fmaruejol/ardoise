@@ -525,6 +525,50 @@ class ExpenseFormViewModelTest {
     }
 
     @Test
+    fun `an expense moved back to the group's currency reopens on the group's amount`() =
+        runTest(dispatcher) {
+            // The original amount and rate stay stored; the currency is what was cleared.
+            api.getExpenseResult = SpliitResult.Success(
+                existing().copy(
+                    amount = 892,
+                    originalAmount = 1000,
+                    originalCurrency = null,
+                    conversionRate = "0.89238",
+                ),
+            )
+            val viewModel = viewModel("e1")
+            advanceUntilIdle()
+
+            val state = viewModel.state.value
+            assertFalse(state.isConverted)
+            assertEquals("8.92", state.amountText)
+            assertEquals("", state.conversionRateText)
+        }
+
+    @Test
+    fun `moving a converted expense back to the group's currency drops the original`() =
+        runTest(dispatcher) {
+            api.getExpenseResult = SpliitResult.Success(
+                existing().copy(
+                    amount = 892,
+                    originalAmount = 1000,
+                    originalCurrency = "USD",
+                    conversionRate = "0.89238",
+                ),
+            )
+            val viewModel = viewModel("e1")
+            advanceUntilIdle()
+
+            viewModel.onEntryCurrencyChange("EUR")
+            viewModel.onSave()
+            advanceUntilIdle()
+
+            val input = api.callsTo("updateExpense").single().arguments[2] as ExpenseInput
+            assertNull(input.originalCurrency)
+            assertNull(input.conversionRate)
+        }
+
+    @Test
     fun `clearing the note on an edit sends an empty one`() = runTest(dispatcher) {
         api.getExpenseResult = SpliitResult.Success(existing().copy(notes = "Booked by Ana"))
         val viewModel = viewModel("e1")
