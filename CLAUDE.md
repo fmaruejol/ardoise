@@ -584,6 +584,12 @@ Spliit does not list. `DefaultCurrencyTest` walks every JVM locale to prove the
 answer is always in `SUPPORTED_CODES`. Only the *code* comes from
 `java.util.Currency`.
 
+**The symbol a new group stores is upstream's `en-US` one** (`GroupCurrency.symbolFor`,
+from `currency-data.json`), whatever the device's language, as the web form does.
+The symbol is stored on the group and shown to every member, so the JDK's locale
+symbol would hand a French device's "$US" to everyone. The picker shows the same
+symbol it will store.
+
 **A currency picked on the form is never overwritten by the stored one** — the
 preference arrives asynchronously, and `currencyChosen` guards it.
 

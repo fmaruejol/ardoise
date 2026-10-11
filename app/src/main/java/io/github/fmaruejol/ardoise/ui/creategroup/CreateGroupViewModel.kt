@@ -254,7 +254,7 @@ class CreateGroupViewModel(
         viewModelScope.launch {
             val input = GroupInput(
                 name = name,
-                currencySymbol = symbolFor(current.currencyCode),
+                currencySymbol = GroupCurrency.symbolFor(current.currencyCode),
                 currencyCode = current.currencyCode,
                 participants = participants.map { ParticipantInput(name = it) },
                 information = current.information.trim().takeIf { it.isNotEmpty() },
@@ -310,15 +310,8 @@ class CreateGroupViewModel(
         youIndex = draft.youIndex.coerceIn(0, (draft.participants.size - 1).coerceAtLeast(0)),
     )
 
-    private fun symbolFor(code: String): String =
-        runCatching { java.util.Currency.getInstance(code).symbol }
-            .getOrNull()
-            ?.takeIf { it.isNotBlank() && it.length <= MAX_SYMBOL }
-            ?: code
-
     private companion object {
         val NAME_RANGE = 2..50
-        const val MAX_SYMBOL = 5
 
         const val DRAFT = "create-group-draft"
     }

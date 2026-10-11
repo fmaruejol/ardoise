@@ -530,6 +530,29 @@ class CreateGroupViewModelTest {
     }
 
     @Test
+    fun `a new group stores upstream's symbol, not the device locale's`() = runTest(dispatcher) {
+        val original = java.util.Locale.getDefault()
+        java.util.Locale.setDefault(java.util.Locale.FRANCE)
+        try {
+            val viewModel = viewModel()
+            advanceUntilIdle()
+            fill(viewModel, "Ana", "Ben")
+            viewModel.onCurrencyChange("USD")
+            viewModel.onYouChange(0)
+
+            viewModel.onSave()
+            advanceUntilIdle()
+
+            // "$US" would be every member's symbol for the group.
+            val input = api.callsTo("createGroup").single().arguments.single() as GroupInput
+            assertEquals("USD", input.currencyCode)
+            assertEquals("$", input.currencySymbol)
+        } finally {
+            java.util.Locale.setDefault(original)
+        }
+    }
+
+    @Test
     fun `a chosen currency survives, and the stored default does not overwrite it`() =
         runTest(dispatcher) {
             preferences.setDefaultCurrencyCode("USD")

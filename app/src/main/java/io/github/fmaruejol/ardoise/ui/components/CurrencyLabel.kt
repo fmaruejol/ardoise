@@ -1,15 +1,12 @@
 package io.github.fmaruejol.ardoise.ui.components
 
-import java.util.Currency
+import io.github.fmaruejol.ardoise.core.currency.GroupCurrency
 
 /**
- * `EUR (€)`, or just the code when the JDK has no symbol worth showing: the
- * code is what the server stores and the symbol is what the reader knows.
- *
- * Only the *symbol* comes from `java.util.Currency`, the number of decimals
- * is `GroupCurrency`'s answer, and the two disagree.
+ * `EUR (€)`, or just the code when the symbol is the code. The symbol is the
+ * one a new group would store, so the picker shows what the group will.
  */
 fun currencyLabel(code: String): String {
-    val symbol = runCatching { Currency.getInstance(code).symbol }.getOrNull()
-    return if (symbol.isNullOrBlank() || symbol == code) code else "$code ($symbol)"
+    val symbol = GroupCurrency.symbolFor(code)
+    return if (symbol == code) code else "$code ($symbol)"
 }

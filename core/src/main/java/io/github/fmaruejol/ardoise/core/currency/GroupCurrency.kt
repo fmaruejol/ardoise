@@ -40,13 +40,27 @@ data class GroupCurrency(
             return if (code in ZERO_DECIMAL_CODES) 0 else DEFAULT_DECIMAL_DIGITS
         }
 
-        /** Upstream's `supportedCurrencyCodes`, in its order. */
-        val SUPPORTED_CODES: List<String> = listOf(
-            "USD", "EUR", "JPY", "BGN", "CZK", "DKK", "GBP", "HUF", "PLN",
-            "RON", "SEK", "CHF", "ISK", "NOK", "TRY", "AUD", "BRL", "CAD",
-            "CNY", "HKD", "IDR", "ILS", "INR", "KRW", "MKD", "MXN", "MYR",
-            "NZD", "PHP", "SGD", "THB", "VND", "ZAR", "COP",
+        /**
+         * Upstream's `supportedCurrencyCodes`, in its order, each with the
+         * symbol a new group stores: the `en-US` entry of upstream's
+         * `currency-data.json`, whatever the device's language. The symbol is
+         * stored on the group, so a locale's (`$US` in French) would be shown
+         * to every member as that group's currency.
+         */
+        private val SYMBOLS: Map<String, String> = linkedMapOf(
+            "USD" to "$", "EUR" to "€", "JPY" to "¥", "BGN" to "BGN", "CZK" to "Kč",
+            "DKK" to "Dkr", "GBP" to "£", "HUF" to "Ft", "PLN" to "zł", "RON" to "RON",
+            "SEK" to "Skr", "CHF" to "CHF", "ISK" to "Ikr", "NOK" to "Nkr", "TRY" to "TL",
+            "AUD" to "AU$", "BRL" to "R$", "CAD" to "CA$", "CNY" to "CN¥", "HKD" to "HK$",
+            "IDR" to "Rp", "ILS" to "₪", "INR" to "Rs", "KRW" to "₩", "MKD" to "MKD",
+            "MXN" to "MX$", "MYR" to "RM", "NZD" to "NZ$", "PHP" to "₱", "SGD" to "S$",
+            "THB" to "฿", "VND" to "₫", "ZAR" to "R", "COP" to "CO$",
         )
+
+        val SUPPORTED_CODES: List<String> = SYMBOLS.keys.toList()
+
+        /** The code itself for one upstream does not list. */
+        fun symbolFor(currencyCode: String): String = SYMBOLS[currencyCode] ?: currencyCode
 
         /**
          * What a new group starts on: the device's currency, or
