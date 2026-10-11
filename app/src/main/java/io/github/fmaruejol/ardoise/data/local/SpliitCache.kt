@@ -5,6 +5,7 @@ import io.github.fmaruejol.ardoise.core.model.Category
 import io.github.fmaruejol.ardoise.core.model.Participant
 import io.github.fmaruejol.ardoise.core.result.SpliitError
 import io.github.fmaruejol.ardoise.core.result.SpliitResult
+import io.github.fmaruejol.ardoise.core.stats.GroupStats
 import io.github.fmaruejol.ardoise.data.RefreshScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
@@ -23,8 +24,8 @@ import kotlinx.coroutines.flow.map
  *
  * Room's DAO `Flow`s already wake every query over a table that was written
  * to; what is left here is the part Room cannot know, that changing an
- * *expense* invalidates the *balances* and the *activity log* too, because the
- * server recomputes both.
+ * *expense* invalidates the *balances*, the *activity log* and the *stats* too,
+ * because the server recomputes all three.
  *
  * Every `refresh` returns the error or null. Nothing throws across this
  * boundary, and a failed refresh leaves the cache as it was.
@@ -95,6 +96,13 @@ class SpliitCache(
 
     fun activities(groupId: String, limit: Int): Flow<List<io.github.fmaruejol.ardoise.core.model.Activity>> =
         database.activities().observe(groupId, limit).map { rows -> rows.map { it.toActivity() } }
+
+    fun stats(groupId: String): Flow<GroupStats?> =
+        combine(
+            database.stats().observe(groupId),
+            database.stats().observeCategories(groupId),
+            database.stats().observeParticipants(groupId),
+        ) { stats, categories, participants -> stats?.let { toGroupStats(it, categories, participants) } }
 
     fun categories(): Flow<List<Category>> =
         database.categories().observe().map { rows -> rows.map { it.toCategory() } }
@@ -213,6 +221,22 @@ class SpliitCache(
             }
         }
 
+    suspend fun refreshStats(groupId: String): SpliitError? =
+        when (val result = api.groupStats(groupId)) {
+            is SpliitResult.Failure -> {
+                result.error
+            }
+
+            is SpliitResult.Success -> {
+                database.stats().replace(
+                    stats = result.value.toEntity(groupId),
+                    categories = result.value.categoryEntities(groupId),
+                    participants = result.value.participantEntities(groupId),
+                )
+                null
+            }
+        }
+
     suspend fun refreshCategories(): SpliitError? =
         when (val result = api.listCategories()) {
             is SpliitResult.Failure -> {
@@ -227,7 +251,10 @@ class SpliitCache(
 
     /**
      * What one expense changing makes stale: the server rewrites the balances
-     * and appends to the activity log, so all three are fetched again.
+     * and the stats, and appends to the activity log, so all are fetched
+     * again. The stats only once Totals has cached them for the group: nothing
+     * else reads them, and a group that never asked should not pay a request
+     * per save.
      *
      * **The page fetched is at least as wide as the one cached.** A refresh
      * replaces the window its page describes, so a narrower page cannot delete
@@ -238,6 +265,7 @@ class SpliitCache(
         refreshExpenses(groupId, maxOf(expenseLimit, cached))
         refreshBalances(groupId)
         refreshActivities(groupId, ACTIVITY_LIMIT)
+        if (database.stats().isCached(groupId)) refreshStats(groupId)
     }
 
     /** Everything cached about a group, gone in one transaction. */

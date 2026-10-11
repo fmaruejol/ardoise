@@ -5,11 +5,14 @@ import androidx.lifecycle.viewModelScope
 import io.github.fmaruejol.ardoise.core.currency.GroupCurrency
 import io.github.fmaruejol.ardoise.core.result.SpliitError
 import io.github.fmaruejol.ardoise.core.result.SpliitResult
+import io.github.fmaruejol.ardoise.core.stats.CategoryTotal
 import io.github.fmaruejol.ardoise.core.stats.GroupStats
-import io.github.fmaruejol.ardoise.core.stats.groupStats
+import io.github.fmaruejol.ardoise.core.stats.ParticipantTotal
+import io.github.fmaruejol.ardoise.core.stats.StatsAverages
+import io.github.fmaruejol.ardoise.core.stats.averages
 import io.github.fmaruejol.ardoise.data.Connectivity
-import io.github.fmaruejol.ardoise.data.ExpenseRepository
 import io.github.fmaruejol.ardoise.data.GroupRepository
+import io.github.fmaruejol.ardoise.data.StatsRepository
 import io.github.fmaruejol.ardoise.ui.Retry
 import io.github.fmaruejol.ardoise.ui.collectOffline
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +24,7 @@ import kotlinx.coroutines.launch
 
 /** One category's bar: its share of the group's spending, and its name. */
 data class CategoryBar(
-    val label: String?,
+    val label: String,
     val total: Long,
     /** 0f to 1f against the largest category. */
     val weight: Float,
@@ -40,6 +43,7 @@ data class TotalsUiState(
     val isLoading: Boolean = true,
     val currency: GroupCurrency = GroupCurrency.of(null, "€"),
     val stats: GroupStats? = null,
+    val averages: StatsAverages? = null,
     val categories: List<CategoryBar> = emptyList(),
     val payers: List<PayerRow> = emptyList(),
     /**
@@ -54,23 +58,21 @@ data class TotalsUiState(
     val error: SpliitError? = null,
 ) {
     val isEmpty: Boolean get() = !isLoading && stats?.total == 0L && categories.isEmpty()
+
+    /** The instance predates `groups.stats.overview` and gave the total alone. */
+    val hasNoBreakdown: Boolean get() = stats != null && stats.breakdown == null
 }
 
 /**
- * A group's spending, added up.
- *
- * The arithmetic is `:core`'s [groupStats] over the group's expenses rather
- * than `groups.stats.overview`. Upstream's stats procedure derives the same
- * numbers from the same list, and keeping it here means the totals cannot drift
- * from the settlement maths they sit next to.
- *
- * The cost is one large page. Should a group ever outgrow [ALL_EXPENSES], the
- * stats procedure is the way out and this becomes a mapping instead.
+ * A group's spending, as `groups.stats.overview` adds it up, the procedure the
+ * web and iOS clients read. Adding up the cached feed instead would need every
+ * expense in the group, and would be a second implementation of the server's
+ * arithmetic for the two to disagree over.
  */
 class TotalsViewModel(
     private val groupId: String,
     groups: GroupRepository,
-    private val expenses: ExpenseRepository,
+    stats: StatsRepository,
     private val connectivity: Connectivity,
 ) : ViewModel() {
     private val _state = MutableStateFlow(TotalsUiState())
@@ -87,30 +89,24 @@ class TotalsViewModel(
             retry.restarting {
                 combine(
                     groups.group(groupId),
-                    expenses.expenses(groupId, limit = ALL_EXPENSES),
+                    stats.stats(groupId),
                     groups.activeParticipantId(groupId),
-                ) { group, page, me -> Triple(group, page, me) }
+                ) { group, stats, me -> Triple(group, stats, me) }
             }
-                .collect { (groupResult, pageResult, me) ->
+                .collect { (groupResult, statsResult, me) ->
                     val group = (groupResult as? SpliitResult.Success)?.value
+                    val stats = (statsResult as? SpliitResult.Success)?.value
                     _state.update { current ->
                         when {
-                            pageResult is SpliitResult.Failure -> {
-                                current.copy(isLoading = false, error = pageResult.error)
+                            statsResult is SpliitResult.Failure -> {
+                                current.copy(isLoading = false, error = statsResult.error)
                             }
 
                             group == null -> {
                                 current.copy(isLoading = false)
                             }
 
-                            pageResult is SpliitResult.Success -> {
-                                val positions = group.participants
-                                    .mapIndexed { index, it -> it.id to index }
-                                    .toMap()
-                                val names = group.participants.associate { it.id to it.name }
-                                val stats = groupStats(pageResult.value.expenses, names)
-                                val widest = stats.byCategory.maxOfOrNull { it.total } ?: 0L
-
+                            stats != null -> {
                                 current.copy(
                                     isLoading = false,
                                     error = null,
@@ -119,26 +115,10 @@ class TotalsViewModel(
                                         group.currencySymbol,
                                     ),
                                     stats = stats,
-                                    categories = stats.byCategory.map {
-                                        CategoryBar(
-                                            label = it.category?.name,
-                                            total = it.total,
-                                            weight = if (widest == 0L) {
-                                                0f
-                                            } else {
-                                                it.total.toFloat() / widest
-                                            },
-                                        )
-                                    },
-                                    payers = stats.byParticipant.map {
-                                        PayerRow(
-                                            participantId = it.participantId,
-                                            name = it.name,
-                                            paid = it.paid,
-                                            isYou = it.participantId == me,
-                                            index = positions[it.participantId] ?: 0,
-                                        )
-                                    },
+                                    averages = stats.averages(group.participants.size),
+                                    categories = stats.breakdown?.byCategory.orEmpty().bars(),
+                                    payers = stats.breakdown?.byParticipant.orEmpty()
+                                        .payers(group.participants.map { it.id }, me),
                                 )
                             }
 
@@ -152,13 +132,27 @@ class TotalsViewModel(
     }
 
     fun onRetry() = retry.again()
+}
 
-    companion object {
-        /**
-         * Big enough that no realistic group pages. The totals are wrong rather
-         * than merely incomplete if an expense is missing, so this asks for all
-         * of them in one go instead of adding up whatever the first page held.
-         */
-        const val ALL_EXPENSES: Int = 1000
+private fun List<CategoryTotal>.bars(): List<CategoryBar> {
+    val widest = maxOfOrNull { it.total } ?: 0L
+    return map {
+        CategoryBar(
+            label = it.category.name,
+            total = it.total,
+            // A category can net below zero on refunds; it gets no bar.
+            weight = if (widest <= 0L) 0f else (it.total.toFloat() / widest).coerceIn(0f, 1f),
+        )
     }
 }
+
+private fun List<ParticipantTotal>.payers(order: List<String>, me: String?): List<PayerRow> =
+    map {
+        PayerRow(
+            participantId = it.participantId,
+            name = it.name,
+            paid = it.paid,
+            isYou = it.participantId == me,
+            index = order.indexOf(it.participantId).coerceAtLeast(0),
+        )
+    }

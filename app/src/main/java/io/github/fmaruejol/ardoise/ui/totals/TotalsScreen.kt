@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.fmaruejol.ardoise.R
 import io.github.fmaruejol.ardoise.core.currency.format
+import io.github.fmaruejol.ardoise.core.stats.StatsAverages
 import io.github.fmaruejol.ardoise.ui.components.InitialAvatar
 import io.github.fmaruejol.ardoise.ui.components.OfflineBanner
 import org.koin.androidx.compose.koinViewModel
@@ -138,7 +139,20 @@ private fun Content(state: TotalsUiState, padding: PaddingValues, onRetry: () ->
                 .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            state.stats?.let { Headline(state = state, stats = it) }
+            val stats = state.stats
+            val averages = state.averages
+            if (stats != null && averages != null) {
+                Headline(state = state, total = stats.total, averages = averages)
+            }
+
+            if (state.hasNoBreakdown) {
+                Text(
+                    text = stringResource(R.string.totals_no_breakdown),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+            }
 
             if (state.categories.isNotEmpty()) {
                 Section(stringResource(R.string.totals_by_category)) {
@@ -165,7 +179,7 @@ private fun Content(state: TotalsUiState, padding: PaddingValues, onRetry: () ->
 }
 
 @Composable
-private fun Headline(state: TotalsUiState, stats: io.github.fmaruejol.ardoise.core.stats.GroupStats) {
+private fun Headline(state: TotalsUiState, total: Long, averages: StatsAverages) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -175,22 +189,25 @@ private fun Headline(state: TotalsUiState, stats: io.github.fmaruejol.ardoise.co
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = pluralStringResource(R.plurals.totals_spent_in, stats.days, stats.days),
+                text = averages.days?.let { pluralStringResource(R.plurals.totals_spent_in, it, it) }
+                    ?: stringResource(R.string.totals_spent),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = state.currency.format(stats.total),
+                text = state.currency.format(total),
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(top = 2.dp),
             )
             Text(
-                text = stringResource(
-                    R.string.totals_per_person,
-                    state.currency.format(stats.perPerson),
-                    state.currency.format(stats.perDayEach),
-                ),
+                text = averages.perDayEach?.let {
+                    stringResource(
+                        R.string.totals_per_person,
+                        state.currency.format(averages.perPerson),
+                        state.currency.format(it),
+                    )
+                } ?: stringResource(R.string.totals_per_person_only, state.currency.format(averages.perPerson)),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp),
@@ -220,7 +237,7 @@ private fun CategoryBarRow(bar: CategoryBar, state: TotalsUiState, index: Int) {
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = bar.label ?: stringResource(R.string.totals_uncategorised),
+                text = bar.label,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,

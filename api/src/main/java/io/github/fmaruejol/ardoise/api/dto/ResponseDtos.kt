@@ -209,6 +209,48 @@ internal data class ListActivitiesResponse(
     val hasMore: Boolean = false,
 )
 
+// --- groups.stats ----------------------------------------------------------
+
+/**
+ * `groups.stats.overview`, read for the figures the totals screen shows; the
+ * rest (months, recurring, the summary's other fields) is ignored. Called
+ * without a participant, so the per-participant totals come back null.
+ */
+@Serializable
+internal data class StatsOverviewResponse(
+    val totalGroupSpendings: Long,
+    val summary: StatsSummaryDto = StatsSummaryDto(),
+    val categories: List<CategorySpendingDto> = emptyList(),
+    val participants: List<ParticipantSpendingDto> = emptyList(),
+)
+
+/** Plain `YYYY-MM-DD` strings, not superjson dates. */
+@Serializable
+internal data class StatsSummaryDto(
+    val firstDate: String? = null,
+    val lastDate: String? = null,
+)
+
+/** An expense with no category is reported as id 0, Uncategorized/General. */
+@Serializable
+internal data class CategorySpendingDto(
+    val categoryId: Int,
+    val grouping: String,
+    val name: String,
+    val total: Long,
+)
+
+@Serializable
+internal data class ParticipantSpendingDto(
+    val participantId: String,
+    val name: String,
+    val paid: Long,
+)
+
+/** `groups.stats.get`, the procedure overview replaced in Spliit 1.23. */
+@Serializable
+internal data class StatsGetResponse(val totalGroupSpendings: Long)
+
 // --- categories.list -------------------------------------------------------
 
 @Serializable

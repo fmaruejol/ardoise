@@ -15,6 +15,10 @@ import io.github.fmaruejol.ardoise.core.model.Participant
 import io.github.fmaruejol.ardoise.core.model.RecurrenceRule
 import io.github.fmaruejol.ardoise.core.model.Reimbursement
 import io.github.fmaruejol.ardoise.core.model.SplitMode
+import io.github.fmaruejol.ardoise.core.stats.CategoryTotal
+import io.github.fmaruejol.ardoise.core.stats.GroupStats
+import io.github.fmaruejol.ardoise.core.stats.ParticipantTotal
+import io.github.fmaruejol.ardoise.core.stats.StatsBreakdown
 import java.time.Instant
 import java.time.LocalDate
 
@@ -268,3 +272,48 @@ private fun String.toSplitMode(): SplitMode = SplitMode.fromWire(this) ?: SplitM
 
 /** Unknown rules degrade to NONE by `:core`'s own contract, display only. */
 private fun String.toRecurrenceRule(): RecurrenceRule = RecurrenceRule.fromWire(this)
+
+internal fun GroupStats.toEntity(groupId: String) = StatsEntity(
+    groupId = groupId,
+    total = total,
+    hasBreakdown = breakdown != null,
+    firstDate = breakdown?.firstDate?.toString(),
+    lastDate = breakdown?.lastDate?.toString(),
+)
+
+internal fun GroupStats.categoryEntities(groupId: String): List<StatsCategoryEntity> =
+    breakdown?.byCategory.orEmpty().mapIndexed { index, it ->
+        StatsCategoryEntity(
+            groupId = groupId,
+            position = index,
+            categoryId = it.category.id,
+            grouping = it.category.grouping,
+            name = it.category.name,
+            total = it.total,
+        )
+    }
+
+internal fun GroupStats.participantEntities(groupId: String): List<StatsParticipantEntity> =
+    breakdown?.byParticipant.orEmpty().mapIndexed { index, it ->
+        StatsParticipantEntity(groupId, index, it.participantId, it.name, it.paid)
+    }
+
+internal fun toGroupStats(
+    stats: StatsEntity,
+    categories: List<StatsCategoryEntity>,
+    participants: List<StatsParticipantEntity>,
+) = GroupStats(
+    total = stats.total,
+    breakdown = if (stats.hasBreakdown) {
+        StatsBreakdown(
+            firstDate = stats.firstDate?.let(LocalDate::parse),
+            lastDate = stats.lastDate?.let(LocalDate::parse),
+            byCategory = categories.map {
+                CategoryTotal(Category(it.categoryId, it.grouping, it.name), it.total)
+            },
+            byParticipant = participants.map { ParticipantTotal(it.participantId, it.name, it.paid) },
+        )
+    } else {
+        null
+    },
+)

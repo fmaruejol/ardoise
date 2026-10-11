@@ -26,6 +26,7 @@ import io.github.fmaruejol.ardoise.data.GroupRepository
 import io.github.fmaruejol.ardoise.data.LanguageRepository
 import io.github.fmaruejol.ardoise.data.NetworkAccess
 import io.github.fmaruejol.ardoise.data.ServerRepository
+import io.github.fmaruejol.ardoise.data.StatsRepository
 import io.github.fmaruejol.ardoise.data.ThemeRepository
 import io.github.fmaruejol.ardoise.data.local.SpliitCache
 import io.github.fmaruejol.ardoise.data.local.outbox.OutboxDatabase
@@ -113,6 +114,7 @@ val dataModule: Module = module {
     }
     single { BalanceRepository(api = get(), preferences = get(), cache = get()) }
     single { ActivityRepository(cache = get()) }
+    single { StatsRepository(cache = get()) }
     single { CategoryRepository(cache = get()) }
     single { ServerRepository(preferences = get(), apiFactory = get()) }
     single { LanguageRepository(preferences = get()) }
@@ -197,7 +199,7 @@ val viewModelModule: Module = module {
         TotalsViewModel(
             groupId = groupId,
             groups = get(),
-            expenses = get(),
+            stats = get(),
             connectivity = get(),
         )
     }

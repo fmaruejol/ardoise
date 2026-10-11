@@ -10,13 +10,14 @@ import io.github.fmaruejol.ardoise.core.model.GroupDetails
 import io.github.fmaruejol.ardoise.core.model.GroupSummary
 import io.github.fmaruejol.ardoise.core.model.UserGroupBalance
 import io.github.fmaruejol.ardoise.core.result.SpliitResult
+import io.github.fmaruejol.ardoise.core.stats.GroupStats
 
 /**
  * Every Spliit tRPC procedure this client speaks, as suspending functions
  * returning domain types. The names and input shapes are undocumented
  * upstream and are written down in [Procedures]; when adding one, read the
  * procedure *and* the Prisma `select` behind it, which decides what comes
- * back. Not yet mapped: `groups.stats.*`.
+ * back. Not mapped: `groups.stats.categoryExpenses` and `monthExpenses`.
  *
  * An interface because this is the seam between `:app` and `:api`: it lets a
  * repository test state its case instead of staging HTTP responses.
@@ -99,6 +100,16 @@ interface SpliitApi {
     suspend fun balancesForUser(
         groups: List<Pair<String, String>>,
     ): SpliitResult<List<UserGroupBalance>>
+
+    // --- stats -------------------------------------------------------------
+
+    /**
+     * The group's spending, from `groups.stats.overview`, or from
+     * `groups.stats.get` on an instance older than Spliit 1.23 that has only
+     * that; the old one answers the total alone, so `breakdown` is null. Fails
+     * with `NOT_FOUND` when the instance has neither.
+     */
+    suspend fun groupStats(groupId: String): SpliitResult<GroupStats>
 
     // --- activities --------------------------------------------------------
 

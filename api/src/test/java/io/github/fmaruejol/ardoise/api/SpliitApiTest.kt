@@ -198,6 +198,60 @@ class SpliitApiTest {
         assertEquals(SpliitResult.Success(Unit), result)
     }
 
+    // --- stats -------------------------------------------------------------
+
+    @Test
+    fun `the stats overview gives the total and its breakdown`() = runTest {
+        server.enqueue(ok(STATS_OVERVIEW_RESPONSE))
+
+        val stats = (api.groupStats("g1") as SpliitResult.Success).value
+
+        assertEquals("/api/trpc/groups.stats.overview", server.takeRequest().requestUrl?.encodedPath)
+        assertEquals(57_600L, stats.total)
+        val breakdown = stats.breakdown!!
+        assertEquals(LocalDate.of(2026, 9, 10), breakdown.firstDate)
+        assertEquals(LocalDate.of(2026, 9, 14), breakdown.lastDate)
+        assertEquals(listOf("Rent", "General"), breakdown.byCategory.map { it.category.name })
+        assertEquals(listOf(48_000L, 9_600L), breakdown.byCategory.map { it.total })
+        assertEquals(
+            listOf("p1" to 48_000L, "p2" to 9_600L),
+            breakdown.byParticipant.map {
+                it.participantId to it.paid
+            },
+        )
+    }
+
+    @Test
+    fun `an instance older than the overview is asked by the old name`() = runTest {
+        server.enqueue(noProcedure("groups.stats.overview"))
+        server.enqueue(ok("""{"result":{"data":{"json":{"totalGroupSpendings":57600}}}}"""))
+
+        val stats = (api.groupStats("g1") as SpliitResult.Success).value
+
+        server.takeRequest()
+        assertEquals("/api/trpc/groups.stats.get", server.takeRequest().requestUrl?.encodedPath)
+        assertEquals(57_600L, stats.total)
+        assertNull(stats.breakdown)
+    }
+
+    @Test
+    fun `an instance with neither says it has no stats`() = runTest {
+        server.enqueue(noProcedure("groups.stats.overview"))
+        server.enqueue(noProcedure("groups.stats.get"))
+
+        assertEquals(SpliitError.NotFound, (api.groupStats("g1") as SpliitResult.Failure).error)
+    }
+
+    @Test
+    fun `only a missing procedure falls back`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(502).setBody("<html>Bad Gateway</html>"))
+
+        val error = (api.groupStats("g1") as SpliitResult.Failure).error
+
+        assertEquals(502, (error as SpliitError.Http).status)
+        assertEquals(1, server.requestCount)
+    }
+
     // --- paging past the server's cap ---------------------------------------
 
     @Test
@@ -316,6 +370,11 @@ class SpliitApiTest {
 
     private fun ok(body: String) = MockResponse().setResponseCode(200).setBody(body)
 
+    private fun noProcedure(path: String) = MockResponse().setResponseCode(404).setBody(
+        """{"error":{"json":{"message":"No procedure found on path $path","code":-32004,""" +
+            """"data":{"code":"NOT_FOUND","httpStatus":404,"path":"$path"}}}}""",
+    )
+
     private fun expensePage(id: String, hasMore: Boolean) = ok(
         EXPENSES_RESPONSE.replace("\"e1\"", "\"$id\"").replace("\"hasMore\":true", "\"hasMore\":$hasMore"),
     )
@@ -341,6 +400,21 @@ class SpliitApiTest {
                 "participants":[{"id":"p1","name":"Ada","groupId":"g1"},
                                 {"id":"p2","name":"Alan","groupId":"g1"}]}},
               "meta":{"values":{"group.createdAt":["Date"]}}}}}
+        """
+
+        /** Trimmed from a real answer: what is not read is left out. */
+        const val STATS_OVERVIEW_RESPONSE = """
+            {"result":{"data":{"json":{"totalGroupSpendings":57600,
+              "totalParticipantSpendings":null,"totalParticipantShare":null,
+              "summary":{"expenseCount":2,"totalSpending":57600,"averageExpense":28800,
+                "largestExpense":{"title":"Rent","amount":48000},
+                "firstDate":"2026-09-10","lastDate":"2026-09-14"},
+              "months":[{"month":"2026-09","total":57600}],
+              "participants":[{"participantId":"p1","name":"Ada","paid":48000,"paidCount":1,"share":28800},
+                              {"participantId":"p2","name":"Alan","paid":9600,"paidCount":1,"share":28800}],
+              "categories":[{"categoryId":1,"grouping":"Home","name":"Rent","total":48000},
+                            {"categoryId":0,"grouping":"Uncategorized","name":"General","total":9600}],
+              "recurring":{"count":0,"byPeriod":[],"estimatedMonthly":0,"estimatedYearly":0}}}}}
         """
 
         const val EXPENSES_RESPONSE = """

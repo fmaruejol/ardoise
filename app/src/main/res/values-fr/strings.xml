@@ -228,7 +228,9 @@
     <string name="totals_per_person">%1$s par personne · %2$s par jour et par personne</string>
     <string name="totals_by_category">Par catégorie</string>
     <string name="totals_who_paid">Qui a le plus payé</string>
-    <string name="totals_uncategorised">Sans catégorie</string>
+    <string name="totals_spent">Dépensé au total</string>
+    <string name="totals_per_person_only">%1$s par personne</string>
+    <string name="totals_no_breakdown">Ce serveur ne donne que le total. À partir de Spliit 1.23, il le détaille aussi par catégorie et par payeur.</string>
     <string name="totals_empty">Rien à totaliser tant qu’il n’y a pas de dépense.</string>
 
     <!-- Activité. -->

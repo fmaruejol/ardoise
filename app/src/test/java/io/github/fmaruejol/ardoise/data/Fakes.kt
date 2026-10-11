@@ -18,6 +18,7 @@ import io.github.fmaruejol.ardoise.core.model.UserGroupBalance
 import io.github.fmaruejol.ardoise.core.prefs.GroupPreferences
 import io.github.fmaruejol.ardoise.core.result.SpliitError
 import io.github.fmaruejol.ardoise.core.result.SpliitResult
+import io.github.fmaruejol.ardoise.core.stats.GroupStats
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,6 +46,8 @@ class FakeSpliitApi : SpliitApi {
     var listActivitiesResult: SpliitResult<ActivityPage> =
         SpliitResult.Success(ActivityPage(emptyList(), hasMore = false))
     var listCategoriesResult: SpliitResult<List<Category>> = SpliitResult.Success(emptyList())
+    var groupStatsResult: SpliitResult<GroupStats> =
+        SpliitResult.Success(GroupStats(total = 0, breakdown = null))
 
     /**
      * Held open so a test can see a state it would otherwise run straight
@@ -171,6 +174,12 @@ class FakeSpliitApi : SpliitApi {
         calls += Call("listActivities", listOf(groupId, cursor, limit))
         gated("listActivities")
         return listActivitiesResult
+    }
+
+    override suspend fun groupStats(groupId: String): SpliitResult<GroupStats> {
+        calls += Call("groupStats", listOf(groupId))
+        gated("groupStats")
+        return groupStatsResult
     }
 
     override suspend fun listCategories(): SpliitResult<List<Category>> {

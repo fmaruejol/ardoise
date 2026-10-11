@@ -67,8 +67,9 @@ data model has a REST route.
 `api.Procedures` is the only place paths are written. Mapped:
 `groups.{get,getDetails,list,create,update}`,
 `groups.expenses.{list,get,create,update,delete}`,
-`groups.balances.{list,forUser}`, `groups.activities.list`, `categories.list`.
-**Not mapped:** `groups.stats.*`.
+`groups.balances.{list,forUser}`, `groups.activities.list`,
+`groups.stats.{overview,get}`, `categories.list`.
+**Not mapped:** `groups.stats.{categoryExpenses,monthExpenses}`.
 
 `categories.list` needs neither input nor group, which is what makes it the probe
 for "is this address a Spliit server".
@@ -374,13 +375,27 @@ idempotent and nothing undoes it.
 
 ## Totals
 
-`ui/totals` over `core.stats`, computed locally rather than through
-`groups.stats.overview`: same arithmetic, and `:core` is where it can be tested
-beside the settlement maths it must not contradict. Cost is one large page; if a
-group outgrows it, that procedure is the way out.
+**The server adds it up**, through `groups.stats.overview`, as the web and iOS
+clients do. Adding up the cached feed would need every expense in the group, past
+`expenses.list`'s cap, and would be a second copy of the server's arithmetic to
+disagree with.
 
-**Reimbursements are excluded from every figure.** `perPerson` and `perDayEach`
-round half away from zero; they are display aggregates nothing downstream reads.
+**Two procedure names, and both are live.** `overview` arrived in Spliit 1.23
+and *replaced* `groups.stats.get`, so `spliit.app` answers only the new one and
+an older self-hosted instance only the old. `SpliitApi.groupStats` asks
+`overview`, and on `NOT_FOUND` asks `get` — never on any other failure. An
+unknown group is all zeros rather than `NOT_FOUND`, so the 404 can only mean the
+procedure. The old one gives the total alone: `breakdown` is null and the screen
+says so instead of showing empty sections. Which name an instance answers is not
+remembered.
+
+The answer is cached (`stats`, `stats_categories`, `stats_participants`), so
+Totals opens offline. `refreshAfterExpenseChange` refreshes it only once a group
+has a cached answer, so a save does not cost a request for a screen nobody opened.
+
+**Reimbursements are excluded from every figure**, by the server.
+`core.stats.averages` derives `perPerson` and `perDayEach`, rounding half away
+from zero; they are display aggregates nothing downstream reads.
 
 ## Searching and filtering
 
@@ -422,7 +437,7 @@ replaced by the next fetch, which is why the database uses
 participant you are — lives in DataStore.
 
 - **Cached**: group list, a group and participants, the feed, one expense in full,
-  balances and suggested payments, the activity log, categories.
+  balances and suggested payments, the activity log, totals, categories.
 - **Not cached**: a **search** (a question about the whole group, whose answer
   would overwrite the feed with a subset of itself), `groups.getDetails`, and
   `groups.balances.forUser` (it spans every group).

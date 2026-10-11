@@ -1,14 +1,37 @@
 package io.github.fmaruejol.ardoise.core.stats
 
 import io.github.fmaruejol.ardoise.core.model.Category
-import io.github.fmaruejol.ardoise.core.model.ExpenseSummary
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import kotlin.math.abs
 
-/** What one category came to, and how much of the group's spending that is. */
+/**
+ * A group's spending as the server adds it up, through `groups.stats.*`, so
+ * that this client and the web show the same figures. Minor units throughout,
+ * and **reimbursements are excluded from every figure** by the server: they are
+ * people settling up, not the group spending more.
+ */
+data class GroupStats(
+    val total: Long,
+    /**
+     * Null from an instance older than `groups.stats.overview` (Spliit 1.23),
+     * whose `groups.stats.get` answers the total alone.
+     */
+    val breakdown: StatsBreakdown?,
+)
+
+data class StatsBreakdown(
+    /** The first and last day anything was spent; null when nothing was. */
+    val firstDate: LocalDate?,
+    val lastDate: LocalDate?,
+    /** Highest first. Categories that net to zero are left out. */
+    val byCategory: List<CategoryTotal>,
+    /** Every participant, whoever has paid for nothing included, highest first. */
+    val byParticipant: List<ParticipantTotal>,
+)
+
 data class CategoryTotal(
-    val category: Category?,
+    val category: Category,
     val total: Long,
 )
 
@@ -20,70 +43,28 @@ data class ParticipantTotal(
 )
 
 /**
- * A group's spending, added up. Minor units throughout; [perPerson] and
- * [perDayEach] are rounded display aggregates that nothing else reads.
+ * The figures printed under the total. Rounded display aggregates that nothing
+ * else reads; the day figures are null when the server gave no dates.
  */
-data class GroupStats(
-    val total: Long,
-    val days: Int,
-    val participantCount: Int,
+data class StatsAverages(
+    val days: Int?,
     val perPerson: Long,
-    val perDayEach: Long,
-    val byCategory: List<CategoryTotal>,
-    val byParticipant: List<ParticipantTotal>,
+    val perDayEach: Long?,
 )
 
-/**
- * Adds a group's expenses up for the totals screen. Here rather than through
- * `groups.stats.overview` because it is the same arithmetic, and `:core` is
- * where it can be tested beside the settlement maths it must not contradict.
- *
- * **Reimbursements are excluded throughout**: they are people settling up, not
- * the group spending more.
- *
- * @param names participant id to name, for [byParticipant].
- */
-fun groupStats(
-    expenses: List<ExpenseSummary>,
-    names: Map<String, String>,
-): GroupStats {
-    val spending = expenses.filterNot { it.isReimbursement }
-    val total = spending.sumOf { it.amount }
-    val participantCount = names.size
-
-    return GroupStats(
-        total = total,
-        days = spending.daysCovered(),
-        participantCount = participantCount,
+fun GroupStats.averages(participantCount: Int): StatsAverages {
+    val days = breakdown?.daysCovered()
+    return StatsAverages(
+        days = days,
         perPerson = divideRounded(total, participantCount),
-        perDayEach = divideRounded(divideRounded(total, spending.daysCovered()), participantCount),
-        byCategory = spending
-            .groupBy { it.category?.id }
-            .map { (_, group) ->
-                CategoryTotal(category = group.first().category, total = group.sumOf { it.amount })
-            }
-            .sortedByDescending { it.total },
-        // Including whoever has paid for nothing: "who paid most" is only
-        // readable against the whole list.
-        byParticipant = names
-            .map { (id, name) ->
-                ParticipantTotal(
-                    participantId = id,
-                    name = name,
-                    paid = spending.filter { it.paidBy.id == id }.sumOf { it.amount },
-                )
-            }
-            .sortedByDescending { it.paid },
+        perDayEach = days?.let { divideRounded(divideRounded(total, it), participantCount) },
     )
 }
 
-/** How many days the spending covers, counting both ends. */
-private fun List<ExpenseSummary>.daysCovered(): Int {
-    if (isEmpty()) return 0
-    val dates = map { it.expenseDate }
-    val first = dates.min()
-    val last = dates.max()
-    return ChronoUnit.DAYS.between(first, last).toInt() + 1
+/** Counting both ends: the 10th to the 14th is five days. */
+private fun StatsBreakdown.daysCovered(): Int {
+    if (firstDate == null || lastDate == null) return 0
+    return ChronoUnit.DAYS.between(firstDate, lastDate).toInt() + 1
 }
 
 /**

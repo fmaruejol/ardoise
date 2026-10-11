@@ -23,8 +23,11 @@ import androidx.room.RoomDatabase
         BalanceEntity::class,
         ReimbursementEntity::class,
         ActivityEntity::class,
+        StatsEntity::class,
+        StatsCategoryEntity::class,
+        StatsParticipantEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class SpliitDatabase : RoomDatabase() {
@@ -37,6 +40,8 @@ abstract class SpliitDatabase : RoomDatabase() {
     abstract fun activities(): ActivityDao
 
     abstract fun categories(): CategoryDao
+
+    abstract fun stats(): StatsDao
 
     /** One group's cached contents, removed together. */
     abstract fun cache(): CacheDao

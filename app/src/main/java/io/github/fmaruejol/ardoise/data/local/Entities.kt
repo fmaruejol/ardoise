@@ -111,6 +111,37 @@ data class ReimbursementEntity(
     val amount: Long,
 )
 
+/** `groups.stats.*`'s answer for one group; the breakdown rows sit beside it. */
+@Entity(tableName = "stats")
+data class StatsEntity(
+    @PrimaryKey val groupId: String,
+    val total: Long,
+    /** False when the instance predates `groups.stats.overview` and gave the total alone. */
+    val hasBreakdown: Boolean,
+    val firstDate: String?,
+    val lastDate: String?,
+)
+
+@Entity(tableName = "stats_categories", primaryKeys = ["groupId", "position"])
+data class StatsCategoryEntity(
+    val groupId: String,
+    /** The server ranks them; that order is the answer. */
+    val position: Int,
+    val categoryId: Int,
+    val grouping: String,
+    val name: String,
+    val total: Long,
+)
+
+@Entity(tableName = "stats_participants", primaryKeys = ["groupId", "position"])
+data class StatsParticipantEntity(
+    val groupId: String,
+    val position: Int,
+    val participantId: String,
+    val name: String,
+    val paid: Long,
+)
+
 @Entity(tableName = "activities", indices = [Index("groupId")])
 data class ActivityEntity(
     @PrimaryKey val id: String,

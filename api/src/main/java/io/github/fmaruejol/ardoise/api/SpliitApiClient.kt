@@ -20,6 +20,8 @@ import io.github.fmaruejol.ardoise.api.dto.ListExpensesInput
 import io.github.fmaruejol.ardoise.api.dto.ListExpensesResponse
 import io.github.fmaruejol.ardoise.api.dto.ListGroupsResponse
 import io.github.fmaruejol.ardoise.api.dto.MutateExpenseResponse
+import io.github.fmaruejol.ardoise.api.dto.StatsGetResponse
+import io.github.fmaruejol.ardoise.api.dto.StatsOverviewResponse
 import io.github.fmaruejol.ardoise.api.dto.UpdateExpenseInput
 import io.github.fmaruejol.ardoise.api.dto.UpdateGroupInput
 import io.github.fmaruejol.ardoise.api.dto.UserGroupRefInput
@@ -33,9 +35,11 @@ import io.github.fmaruejol.ardoise.core.model.GroupBalances
 import io.github.fmaruejol.ardoise.core.model.GroupDetails
 import io.github.fmaruejol.ardoise.core.model.GroupSummary
 import io.github.fmaruejol.ardoise.core.model.UserGroupBalance
+import io.github.fmaruejol.ardoise.core.result.SpliitError
 import io.github.fmaruejol.ardoise.core.result.SpliitResult
 import io.github.fmaruejol.ardoise.core.result.map
 import io.github.fmaruejol.ardoise.core.result.mapCatching
+import io.github.fmaruejol.ardoise.core.stats.GroupStats
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
@@ -201,6 +205,29 @@ class SpliitApiClient(private val client: TrpcClient) : SpliitApi {
             ),
         ).mapCatching { response -> response.balances.map { it.toDomain() } }
 
+    // --- stats -------------------------------------------------------------
+
+    /**
+     * Which of the two an instance answers is deliberately not remembered: it
+     * would have to be invalidated when the server is upgraded underneath it,
+     * to save one `NOT_FOUND`, and only on instances that are behind.
+     */
+    override suspend fun groupStats(groupId: String): SpliitResult<GroupStats> {
+        val overview = client.query(
+            procedure = Procedures.STATS_OVERVIEW,
+            deserializer = StatsOverviewResponse.serializer(),
+            input = encode(GroupIdInput.serializer(), GroupIdInput(groupId)),
+        ).mapCatching { it.toDomain() }
+        // An unknown group is all zeros, so NOT_FOUND here is the procedure.
+        if (overview !is SpliitResult.Failure || overview.error != SpliitError.NotFound) return overview
+
+        return client.query(
+            procedure = Procedures.STATS_GET,
+            deserializer = StatsGetResponse.serializer(),
+            input = encode(GroupIdInput.serializer(), GroupIdInput(groupId)),
+        ).mapCatching { GroupStats(total = it.totalGroupSpendings, breakdown = null) }
+    }
+
     // --- activities --------------------------------------------------------
 
     override suspend fun listActivities(
@@ -294,6 +321,9 @@ object Procedures {
     const val BALANCES_FOR_USER = "groups.balances.forUser"
 
     const val ACTIVITIES_LIST = "groups.activities.list"
+
+    const val STATS_OVERVIEW = "groups.stats.overview"
+    const val STATS_GET = "groups.stats.get"
 
     const val CATEGORIES_LIST = "categories.list"
 }

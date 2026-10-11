@@ -204,6 +204,49 @@ interface BalanceDao {
 }
 
 @Dao
+interface StatsDao {
+    @Query("SELECT * FROM stats WHERE groupId = :groupId")
+    fun observe(groupId: String): Flow<StatsEntity?>
+
+    @Query("SELECT * FROM stats_categories WHERE groupId = :groupId ORDER BY position")
+    fun observeCategories(groupId: String): Flow<List<StatsCategoryEntity>>
+
+    @Query("SELECT * FROM stats_participants WHERE groupId = :groupId ORDER BY position")
+    fun observeParticipants(groupId: String): Flow<List<StatsParticipantEntity>>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM stats WHERE groupId = :groupId)")
+    suspend fun isCached(groupId: String): Boolean
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(stats: StatsEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertCategories(categories: List<StatsCategoryEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertParticipants(participants: List<StatsParticipantEntity>)
+
+    @Query("DELETE FROM stats_categories WHERE groupId = :groupId")
+    suspend fun clearCategories(groupId: String)
+
+    @Query("DELETE FROM stats_participants WHERE groupId = :groupId")
+    suspend fun clearParticipants(groupId: String)
+
+    @Transaction
+    suspend fun replace(
+        stats: StatsEntity,
+        categories: List<StatsCategoryEntity>,
+        participants: List<StatsParticipantEntity>,
+    ) {
+        clearCategories(stats.groupId)
+        clearParticipants(stats.groupId)
+        upsert(stats)
+        upsertCategories(categories)
+        upsertParticipants(participants)
+    }
+}
+
+@Dao
 interface ActivityDao {
     @Query("SELECT * FROM activities WHERE groupId = :groupId ORDER BY position LIMIT :limit")
     fun observe(groupId: String, limit: Int): Flow<List<ActivityEntity>>
@@ -242,6 +285,9 @@ interface CacheDao {
         deleteBalances(groupId)
         deleteReimbursements(groupId)
         deleteActivities(groupId)
+        deleteStats(groupId)
+        deleteStatsCategories(groupId)
+        deleteStatsParticipants(groupId)
         deleteParticipants(groupId)
         deleteGroup(groupId)
     }
@@ -263,6 +309,15 @@ interface CacheDao {
 
     @Query("DELETE FROM activities WHERE groupId = :groupId")
     suspend fun deleteActivities(groupId: String)
+
+    @Query("DELETE FROM stats WHERE groupId = :groupId")
+    suspend fun deleteStats(groupId: String)
+
+    @Query("DELETE FROM stats_categories WHERE groupId = :groupId")
+    suspend fun deleteStatsCategories(groupId: String)
+
+    @Query("DELETE FROM stats_participants WHERE groupId = :groupId")
+    suspend fun deleteStatsParticipants(groupId: String)
 
     @Query("DELETE FROM participants WHERE groupId = :groupId")
     suspend fun deleteParticipants(groupId: String)

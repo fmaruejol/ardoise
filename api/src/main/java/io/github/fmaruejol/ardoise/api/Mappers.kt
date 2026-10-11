@@ -15,6 +15,7 @@ import io.github.fmaruejol.ardoise.api.dto.ListExpensesResponse
 import io.github.fmaruejol.ardoise.api.dto.PaidForFormDto
 import io.github.fmaruejol.ardoise.api.dto.ParticipantDto
 import io.github.fmaruejol.ardoise.api.dto.ParticipantFormDto
+import io.github.fmaruejol.ardoise.api.dto.StatsOverviewResponse
 import io.github.fmaruejol.ardoise.api.dto.UserBalanceDto
 import io.github.fmaruejol.ardoise.api.superjson.SuperJsonDate
 import io.github.fmaruejol.ardoise.api.superjson.toUtcLocalDate
@@ -37,9 +38,14 @@ import io.github.fmaruejol.ardoise.core.model.RecurrenceRule
 import io.github.fmaruejol.ardoise.core.model.Reimbursement
 import io.github.fmaruejol.ardoise.core.model.SplitMode
 import io.github.fmaruejol.ardoise.core.model.UserGroupBalance
+import io.github.fmaruejol.ardoise.core.stats.CategoryTotal
+import io.github.fmaruejol.ardoise.core.stats.GroupStats
+import io.github.fmaruejol.ardoise.core.stats.ParticipantTotal
+import io.github.fmaruejol.ardoise.core.stats.StatsBreakdown
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.JsonUnquotedLiteral
 import java.time.Instant
+import java.time.LocalDate
 
 /**
  * DTO to domain. Anything thrown here becomes
@@ -151,6 +157,18 @@ internal fun ActivityDto.toDomain() = Activity(
     participantId = participantId,
     expenseId = expenseId,
     data = data,
+)
+
+internal fun StatsOverviewResponse.toDomain() = GroupStats(
+    total = totalGroupSpendings,
+    breakdown = StatsBreakdown(
+        firstDate = summary.firstDate?.let(LocalDate::parse),
+        lastDate = summary.lastDate?.let(LocalDate::parse),
+        byCategory = categories.map {
+            CategoryTotal(Category(it.categoryId, it.grouping, it.name), it.total)
+        },
+        byParticipant = participants.map { ParticipantTotal(it.participantId, it.name, it.paid) },
+    ),
 )
 
 internal fun ListActivitiesResponse.toDomain() = ActivityPage(

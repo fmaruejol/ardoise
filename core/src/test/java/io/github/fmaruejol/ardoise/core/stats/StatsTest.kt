@@ -1,145 +1,49 @@
 package io.github.fmaruejol.ardoise.core.stats
 
-import io.github.fmaruejol.ardoise.core.model.Category
-import io.github.fmaruejol.ardoise.core.model.ExpenseSummary
-import io.github.fmaruejol.ardoise.core.model.PaidForWithParticipant
-import io.github.fmaruejol.ardoise.core.model.Participant
-import io.github.fmaruejol.ardoise.core.model.RecurrenceRule
-import io.github.fmaruejol.ardoise.core.model.SplitMode
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
-import java.time.Instant
 import java.time.LocalDate
 
 class StatsTest {
-    private val ana = Participant("p1", "Ana")
-    private val ben = Participant("p2", "Ben")
-    private val names = mapOf("p1" to "Ana", "p2" to "Ben")
-
-    private val housing = Category(1, "Home", "Rent")
-    private val food = Category(2, "Food and Drink", "Dining Out")
-
-    @Test
-    fun `adds up what the group spent`() {
-        val stats = groupStats(
-            listOf(
-                expense("e1", 48_000, "2026-09-10", housing, ana),
-                expense("e2", 9_600, "2026-09-11", food, ben),
-            ),
-            names,
-        )
-
-        assertEquals(57_600, stats.total)
-    }
-
-    @Test
-    fun `leaves reimbursements out of every figure`() {
-        val stats = groupStats(
-            listOf(
-                expense("e1", 9_600, "2026-09-11", food, ana),
-                expense("e2", 4_800, "2026-09-12", null, ben, isReimbursement = true),
-            ),
-            names,
-        )
-
-        // Settling up is not the group spending more.
-        assertEquals(9_600, stats.total)
-        assertEquals(0, stats.byParticipant.first { it.participantId == "p2" }.paid)
-        assertEquals(1, stats.byCategory.size)
-    }
-
     @Test
     fun `counts both ends of the span`() {
-        val stats = groupStats(
-            listOf(
-                expense("e1", 100, "2026-09-10", null, ana),
-                expense("e2", 100, "2026-09-14", null, ana),
-            ),
-            names,
-        )
+        val averages = stats(57_600, "2026-09-10", "2026-09-14").averages(participantCount = 2)
 
         // The 10th to the 14th is five days, not four.
-        assertEquals(5, stats.days)
+        assertEquals(5, averages.days)
     }
 
     @Test
-    fun `two expenses on one day are one day`() {
-        val stats = groupStats(
-            listOf(
-                expense("e1", 100, "2026-09-10", null, ana),
-                expense("e2", 100, "2026-09-10", null, ben),
-            ),
-            names,
-        )
-
-        assertEquals(1, stats.days)
+    fun `spending on one day is one day`() {
+        assertEquals(1, stats(100, "2026-09-10", "2026-09-10").averages(2).days)
     }
 
     @Test
     fun `divides the total between the people and the days`() {
-        val stats = groupStats(
-            listOf(
-                expense("e1", 48_000, "2026-09-10", housing, ana),
-                expense("e2", 9_600, "2026-09-14", food, ben),
-            ),
-            names,
-        )
+        val averages = stats(57_600, "2026-09-10", "2026-09-14").averages(participantCount = 2)
 
-        assertEquals(28_800, stats.perPerson)
+        assertEquals(28_800, averages.perPerson)
         // 576.00 over five days is 115.20 a day, 57.60 each.
-        assertEquals(5_760, stats.perDayEach)
-    }
-
-    @Test
-    fun `ranks categories by what they came to`() {
-        val stats = groupStats(
-            listOf(
-                expense("e1", 9_600, "2026-09-11", food, ana),
-                expense("e2", 48_000, "2026-09-10", housing, ana),
-                expense("e3", 1_000, "2026-09-11", food, ben),
-            ),
-            names,
-        )
-
-        assertEquals(listOf("Rent", "Dining Out"), stats.byCategory.map { it.category?.name })
-        assertEquals(listOf(48_000L, 10_600L), stats.byCategory.map { it.total })
-    }
-
-    @Test
-    fun `groups the expenses with no category together`() {
-        val stats = groupStats(
-            listOf(
-                expense("e1", 100, "2026-09-11", null, ana),
-                expense("e2", 200, "2026-09-11", null, ben),
-            ),
-            names,
-        )
-
-        assertEquals(1, stats.byCategory.size)
-        assertEquals(300, stats.byCategory.single().total)
-    }
-
-    @Test
-    fun `ranks who paid, and keeps whoever paid for nothing`() {
-        val stats = groupStats(
-            listOf(expense("e1", 9_600, "2026-09-11", food, ana)),
-            names,
-        )
-
-        // "Who paid most" only reads against the whole group; dropping the
-        // people at zero would hide that they have paid for nothing.
-        assertEquals(listOf("Ana", "Ben"), stats.byParticipant.map { it.name })
-        assertEquals(listOf(9_600L, 0L), stats.byParticipant.map { it.paid })
+        assertEquals(5_760L, averages.perDayEach)
     }
 
     @Test
     fun `an empty group divides by nothing without falling over`() {
-        val stats = groupStats(emptyList(), emptyMap())
+        val averages = stats(0, null, null).averages(participantCount = 0)
 
-        assertEquals(0, stats.total)
-        assertEquals(0, stats.days)
-        assertEquals(0, stats.perPerson)
-        assertEquals(0, stats.perDayEach)
+        assertEquals(0, averages.days)
+        assertEquals(0, averages.perPerson)
+        assertEquals(0L, averages.perDayEach)
+    }
+
+    @Test
+    fun `an instance that gave only the total has no day figures`() {
+        val averages = GroupStats(total = 9_000, breakdown = null).averages(participantCount = 3)
+
+        assertEquals(3_000, averages.perPerson)
+        assertNull(averages.days)
+        assertNull(averages.perDayEach)
     }
 
     // --- the rounding these figures are allowed to do ----------------------
@@ -160,27 +64,13 @@ class StatsTest {
         assertEquals(3_333, divideRounded(10_000, 3))
     }
 
-    private fun expense(
-        id: String,
-        amount: Long,
-        date: String,
-        category: Category?,
-        paidBy: Participant,
-        isReimbursement: Boolean = false,
-    ) = ExpenseSummary(
-        id = id,
-        title = id,
-        amount = amount,
-        originalAmount = null,
-        originalCurrency = null,
-        expenseDate = LocalDate.parse(date),
-        createdAt = Instant.parse("${date}T12:00:00Z"),
-        category = category,
-        paidBy = paidBy,
-        paidFor = listOf(PaidForWithParticipant(ana, 1), PaidForWithParticipant(ben, 1)),
-        splitMode = SplitMode.EVENLY,
-        recurrenceRule = RecurrenceRule.NONE,
-        isReimbursement = isReimbursement,
-        documentCount = 0,
+    private fun stats(total: Long, first: String?, last: String?) = GroupStats(
+        total = total,
+        breakdown = StatsBreakdown(
+            firstDate = first?.let(LocalDate::parse),
+            lastDate = last?.let(LocalDate::parse),
+            byCategory = emptyList(),
+            byParticipant = emptyList(),
+        ),
     )
 }

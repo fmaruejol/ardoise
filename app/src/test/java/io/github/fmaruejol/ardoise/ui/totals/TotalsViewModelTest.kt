@@ -2,19 +2,18 @@ package io.github.fmaruejol.ardoise.ui.totals
 
 import android.app.Application
 import io.github.fmaruejol.ardoise.core.model.Category
-import io.github.fmaruejol.ardoise.core.model.ExpensePage
-import io.github.fmaruejol.ardoise.core.model.ExpenseSummary
-import io.github.fmaruejol.ardoise.core.model.PaidForWithParticipant
 import io.github.fmaruejol.ardoise.core.model.Participant
-import io.github.fmaruejol.ardoise.core.model.RecurrenceRule
-import io.github.fmaruejol.ardoise.core.model.SplitMode
 import io.github.fmaruejol.ardoise.core.result.SpliitError
 import io.github.fmaruejol.ardoise.core.result.SpliitResult
-import io.github.fmaruejol.ardoise.data.ExpenseRepository
+import io.github.fmaruejol.ardoise.core.stats.CategoryTotal
+import io.github.fmaruejol.ardoise.core.stats.GroupStats
+import io.github.fmaruejol.ardoise.core.stats.ParticipantTotal
+import io.github.fmaruejol.ardoise.core.stats.StatsBreakdown
 import io.github.fmaruejol.ardoise.data.FakeConnectivity
 import io.github.fmaruejol.ardoise.data.FakeGroupPreferences
 import io.github.fmaruejol.ardoise.data.FakeSpliitApi
 import io.github.fmaruejol.ardoise.data.GroupRepository
+import io.github.fmaruejol.ardoise.data.StatsRepository
 import io.github.fmaruejol.ardoise.data.group
 import io.github.fmaruejol.ardoise.data.testCache
 import io.github.fmaruejol.ardoise.data.testOutbox
@@ -36,7 +35,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.IOException
-import java.time.Instant
 import java.time.LocalDate
 
 @RunWith(RobolectricTestRunner::class)
@@ -49,7 +47,6 @@ class TotalsViewModelTest {
     private val cache = testCache(api, dispatcher)
     private val outbox = testOutbox(api, cache, preferences, dispatcher)
     private val groups = GroupRepository(api, preferences, cache, outbox)
-    private val expenses = ExpenseRepository(api, preferences, cache, outbox)
     private val connectivity = FakeConnectivity()
 
     private val ana = Participant("p1", "Ana")
@@ -68,48 +65,57 @@ class TotalsViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel() = TotalsViewModel("g1", groups, expenses, connectivity)
+    private fun viewModel() = TotalsViewModel("g1", groups, StatsRepository(cache), connectivity)
 
-    private fun list(vararg expenses: ExpenseSummary) {
-        api.listExpensesResult =
-            SpliitResult.Success(ExpensePage(expenses.toList(), hasMore = false))
+    private fun answer(
+        total: Long,
+        categories: List<CategoryTotal> = listOf(CategoryTotal(food, total)),
+        payers: List<ParticipantTotal> = listOf(
+            ParticipantTotal(ana.id, ana.name, total),
+            ParticipantTotal(ben.id, ben.name, 0),
+            ParticipantTotal(cara.id, cara.name, 0),
+        ),
+    ) {
+        api.groupStatsResult = SpliitResult.Success(
+            GroupStats(
+                total = total,
+                breakdown = StatsBreakdown(
+                    firstDate = LocalDate.of(2026, 9, 11),
+                    lastDate = LocalDate.of(2026, 9, 12),
+                    byCategory = categories,
+                    byParticipant = payers,
+                ),
+            ),
+        )
     }
 
     @Test
-    fun `adds the group up`() = runTest(dispatcher) {
-        list(
-            expense("e1", "Surf", 14_000, "2026-09-12"),
-            expense("e2", "Dinner", 9600, "2026-09-11"),
-        )
+    fun `shows what the server added up`() = runTest(dispatcher) {
+        answer(23_700)
         val viewModel = viewModel()
         advanceUntilIdle()
 
         val state = viewModel.state.value
         assertFalse(state.isLoading)
-        assertEquals(23_600L, state.stats?.total)
-        assertEquals(3, state.stats?.participantCount)
+        assertEquals(23_700L, state.stats?.total)
+        assertEquals(2, state.averages?.days)
+        assertEquals(7_900L, state.averages?.perPerson)
         assertNull(state.error)
     }
 
     @Test
-    fun `a reimbursement is settling up, not spending`() = runTest(dispatcher) {
-        list(
-            expense("e1", "Dinner", 9600, "2026-09-11"),
-            expense("e2", "Ben pays Ana", 4800, "2026-09-12", isReimbursement = true),
-        )
-        val viewModel = viewModel()
+    fun `asks the stats procedure, not for every expense`() = runTest(dispatcher) {
+        answer(9600)
+        viewModel()
         advanceUntilIdle()
 
-        assertEquals(9600L, viewModel.state.value.stats?.total)
-        assertEquals(listOf(9600L), viewModel.state.value.categories.map { it.total })
+        assertEquals(1, api.callsTo("groupStats").size)
+        assertTrue(api.callsTo("listExpenses").isEmpty())
     }
 
     @Test
     fun `the widest category bar is full, the rest are drawn against it`() = runTest(dispatcher) {
-        list(
-            expense("e1", "Surf", 15_000, "2026-09-12", category = food),
-            expense("e2", "Taxi", 5000, "2026-09-11", category = transport),
-        )
+        answer(20_000, categories = listOf(CategoryTotal(food, 15_000), CategoryTotal(transport, 5000)))
         val viewModel = viewModel()
         advanceUntilIdle()
 
@@ -120,21 +126,33 @@ class TotalsViewModelTest {
     }
 
     @Test
-    fun `a group that has spent nothing has no bar of width zero over zero`() =
+    fun `a category netting below zero gets no bar rather than a negative one`() =
         runTest(dispatcher) {
-            list(expense("e1", "Ben pays Ana", 4800, "2026-09-12", isReimbursement = true))
+            answer(4000, categories = listOf(CategoryTotal(food, 5000), CategoryTotal(transport, -1000)))
             val viewModel = viewModel()
             advanceUntilIdle()
 
-            assertTrue(viewModel.state.value.categories.all { it.weight == 0f })
-            assertTrue(viewModel.state.value.isEmpty)
+            assertEquals(0f, viewModel.state.value.categories.last().weight, 0f)
         }
 
     @Test
+    fun `a group that has spent nothing is empty`() = runTest(dispatcher) {
+        answer(0, categories = emptyList())
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value.isEmpty)
+    }
+
+    @Test
     fun `a payer keeps the position the group gave them`() = runTest(dispatcher) {
-        list(
-            expense("e1", "Surf", 20_000, "2026-09-12", paidBy = cara),
-            expense("e2", "Dinner", 9600, "2026-09-11", paidBy = ana),
+        answer(
+            29_600,
+            payers = listOf(
+                ParticipantTotal(cara.id, cara.name, 20_000),
+                ParticipantTotal(ana.id, ana.name, 9600),
+                ParticipantTotal(ben.id, ben.name, 0),
+            ),
         )
         val viewModel = viewModel()
         advanceUntilIdle()
@@ -147,7 +165,7 @@ class TotalsViewModelTest {
 
     @Test
     fun `marks whoever this device says it is`() = runTest(dispatcher) {
-        list(expense("e1", "Dinner", 9600, "2026-09-11"))
+        answer(9600)
         preferences.setActiveParticipantId("g1", ben.id)
         val viewModel = viewModel()
         advanceUntilIdle()
@@ -156,8 +174,39 @@ class TotalsViewModelTest {
     }
 
     @Test
+    fun `an older instance gives the total and says why there is nothing else`() =
+        runTest(dispatcher) {
+            api.groupStatsResult = SpliitResult.Success(GroupStats(total = 9000, breakdown = null))
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            val state = viewModel.state.value
+            assertEquals(9000L, state.stats?.total)
+            assertEquals(3000L, state.averages?.perPerson)
+            assertNull(state.averages?.days)
+            assertTrue(state.hasNoBreakdown)
+            assertTrue(state.categories.isEmpty())
+            assertTrue(state.payers.isEmpty())
+            assertFalse(state.isEmpty)
+        }
+
+    @Test
+    fun `what was fetched once is shown again with no network`() = runTest(dispatcher) {
+        answer(9600)
+        viewModel()
+        advanceUntilIdle()
+
+        api.groupStatsResult = SpliitResult.Failure(offline)
+        val again = viewModel()
+        advanceUntilIdle()
+
+        assertEquals(9600L, again.state.value.stats?.total)
+        assertEquals(offline, again.state.value.error)
+    }
+
+    @Test
     fun `a failed read stops loading and says why`() = runTest(dispatcher) {
-        api.listExpensesResult = SpliitResult.Failure(offline)
+        api.groupStatsResult = SpliitResult.Failure(offline)
         val viewModel = viewModel()
         advanceUntilIdle()
 
@@ -167,12 +216,12 @@ class TotalsViewModelTest {
 
     @Test
     fun `retrying asks again and clears the error`() = runTest(dispatcher) {
-        api.listExpensesResult = SpliitResult.Failure(offline)
+        api.groupStatsResult = SpliitResult.Failure(offline)
         val viewModel = viewModel()
         advanceUntilIdle()
         assertEquals(offline, viewModel.state.value.error)
 
-        list(expense("e1", "Dinner", 9600, "2026-09-11"))
+        answer(9600)
         viewModel.onRetry()
         advanceUntilIdle()
 
@@ -194,40 +243,4 @@ class TotalsViewModelTest {
         advanceUntilIdle()
         assertFalse(viewModel.state.value.isOffline)
     }
-
-    @Test
-    fun `asks for the whole group, since a missing expense is a wrong total`() =
-        runTest(dispatcher) {
-            list(expense("e1", "Dinner", 9600, "2026-09-11"))
-            viewModel()
-            advanceUntilIdle()
-
-            val limits = api.callsTo("listExpenses").map { it.arguments[2] }
-            assertTrue(limits.all { it == TotalsViewModel.ALL_EXPENSES })
-        }
-
-    private fun expense(
-        id: String,
-        title: String,
-        amount: Long,
-        date: String,
-        isReimbursement: Boolean = false,
-        category: Category = food,
-        paidBy: Participant = ana,
-    ) = ExpenseSummary(
-        id = id,
-        title = title,
-        amount = amount,
-        originalAmount = null,
-        originalCurrency = null,
-        expenseDate = LocalDate.parse(date),
-        createdAt = Instant.parse("${date}T12:00:00Z"),
-        category = category,
-        paidBy = paidBy,
-        paidFor = listOf(ana, ben, cara).map { PaidForWithParticipant(it, 1) },
-        splitMode = SplitMode.EVENLY,
-        recurrenceRule = RecurrenceRule.NONE,
-        isReimbursement = isReimbursement,
-        documentCount = 0,
-    )
 }
